@@ -1,10 +1,19 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
+import ReactDOM from "react-dom/client";
+import "./index.css";
+import React, { Suspense } from "react";
+import { BrowserRouter } from "react-router-dom";
+import AppRoutes from "./extra/routes";
+import Loading from "./components/Loading";
+import { Toaster } from "react-hot-toast";
+import StateProvider from "./functions/features/StateProvider";
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <BrowserRouter>
+    <Suspense fallback={<Loading />}>
+      <StateProvider>
+        <Toaster />
+        <AppRoutes />
+      </StateProvider>
+    </Suspense>
+  </BrowserRouter>
+);

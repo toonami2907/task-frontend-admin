@@ -3,7 +3,7 @@ import {
   } from "lucide-react";
   import { Button } from "@/components/ui/button";
 
-const NoAds = () => {
+const NoAds = ({state}) => {
     return (
         <div className='flex flex-col items-center justify-center gap-2 '>
         <div>
@@ -14,9 +14,10 @@ const NoAds = () => {
           <h1 className='font-bold font-bold '>No results found</h1>
           <p>You haven`t created any ads yet.</p>
           <Button
+          onClick={() => window.location.reload()}
           className='bg-inherit shadow-none font-sans text-gray-900 hover:bg-gray-400 border border-gray-400 hover:text-gray-50'
           >
-            Create Ads
+            Refresh {state || 'Page'}
           </Button>
       </div>
     )

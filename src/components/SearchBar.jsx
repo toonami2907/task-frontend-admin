@@ -1,22 +1,52 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronRight, ChevronDown } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown, ArrowUpDown } from 'lucide-react';
 import { actionCategories } from '@/functions/resources/arrays';
 
-// Props type for data updates and selections
+const STORAGE_KEYS = {
+  RECENT_SEARCHES: 'recent_searches',
+  SELECTED_FILTERS: 'selected_filters',
+  SORT_PREFERENCE: 'sort_preference'
+};
+
 const SearchBar = ({ onFilterSelect, onDataUpdate }) => {
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [recentSearches, setRecentSearches] = useState([]);
+  const [recentSearches, setRecentSearches] = useState(() => {
+    const stored = localStorage.getItem(STORAGE_KEYS.RECENT_SEARCHES);
+    return stored ? JSON.parse(stored) : [];
+  });
   const [showDropdown, setShowDropdown] = useState(false);
   const [expandedFilters, setExpandedFilters] = useState({});
-  const [selectedFilters, setSelectedFilters] = useState([]);
-  const [searchType, setSearchType] = useState(null); // For ID/Name type searches
+  const [selectedFilters, setSelectedFilters] = useState(() => {
+    const stored = localStorage.getItem(STORAGE_KEYS.SELECTED_FILTERS);
+    return stored ? JSON.parse(stored) : [];
+  });
+  const [searchType, setSearchType] = useState(null);
+  const [sortConfig, setSortConfig] = useState(() => {
+    const stored = localStorage.getItem(STORAGE_KEYS.SORT_PREFERENCE);
+    return stored ? JSON.parse(stored) : { field: null, direction: 'asc' };
+  });
 
-  // Special filters that require specific handling
   const specialFilters = {
     ids: ['Ad ID', 'Ad set ID', 'Campaign ID', 'Account ID'],
-    names: ['Ad name', 'Ad Set Name', 'Campaign name', 'Account name']
+    names: ['Ad name', 'Ad Set Name', 'Campaign name', 'Account name'],
+    sortable: ['Amount spent', 'Impression', 'Reach', 'Clicks', 'CTR']
   };
+
+  // Persist selected filters to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SELECTED_FILTERS, JSON.stringify(selectedFilters));
+  }, [selectedFilters]);
+
+  // Persist recent searches to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.RECENT_SEARCHES, JSON.stringify(recentSearches));
+  }, [recentSearches]);
+
+  // Persist sort preference to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SORT_PREFERENCE, JSON.stringify(sortConfig));
+  }, [sortConfig]);
 
   const findMatches = (searchTerm) => {
     if (!searchTerm) return [];
@@ -35,14 +65,13 @@ const SearchBar = ({ onFilterSelect, onDataUpdate }) => {
     return results;
   };
 
-  // Check if a filter is an ID or name type
   const getFilterType = (filterName) => {
     if (specialFilters.ids.includes(filterName)) return 'id';
     if (specialFilters.names.includes(filterName)) return 'name';
+    if (specialFilters.sortable.includes(filterName)) return 'sortable';
     return 'regular';
   };
 
-  // Handle search term changes
   useEffect(() => {
     if (search) {
       const matches = findMatches(search);
@@ -52,7 +81,6 @@ const SearchBar = ({ onFilterSelect, onDataUpdate }) => {
     }
   }, [search]);
 
-  // Handle selection of a search result or filter
   const handleSelectResult = (result) => {
     const filterType = getFilterType(result.name);
     
@@ -64,12 +92,9 @@ const SearchBar = ({ onFilterSelect, onDataUpdate }) => {
     setSelectedFilters(prev => {
       if (!prev.find(f => f.name === result.name)) {
         const newFilters = [...prev, result];
-        
-        // Notify parent component of filter selection
         if (onFilterSelect) {
           onFilterSelect(newFilters, filterType);
         }
-        
         return newFilters;
       }
       return prev;
@@ -80,9 +105,19 @@ const SearchBar = ({ onFilterSelect, onDataUpdate }) => {
       const newSearches = prev.filter(item => item.name !== result.name);
       return [result, ...newSearches].slice(0, 5);
     });
+
+    // Handle sort if it's a sortable field
+    if (filterType === 'sortable') {
+      setSortConfig({
+        field: result.name,
+        direction: 'desc'
+      });
+      if (onDataUpdate) {
+        onDataUpdate({ sortField: result.name, sortDirection: 'desc' });
+      }
+    }
   };
 
-  // Handle removing a selected filter
   const handleRemoveFilter = (filter) => {
     setSelectedFilters(prev => {
       const newFilters = prev.filter(f => f.name !== filter.name);
@@ -91,6 +126,25 @@ const SearchBar = ({ onFilterSelect, onDataUpdate }) => {
       }
       return newFilters;
     });
+
+    // Clear sort if removing sorted field
+    if (sortConfig.field === filter.name) {
+      setSortConfig({ field: null, direction: 'asc' });
+      if (onDataUpdate) {
+        onDataUpdate({ sortField: null, sortDirection: 'asc' });
+      }
+    }
+  };
+
+  const toggleSort = (field) => {
+    const newDirection = sortConfig.field === field && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    setSortConfig({
+      field,
+      direction: newDirection
+    });
+    if (onDataUpdate) {
+      onDataUpdate({ sortField: field, sortDirection: newDirection });
+    }
   };
 
   const toggleFilter = (filterName) => {
@@ -100,14 +154,6 @@ const SearchBar = ({ onFilterSelect, onDataUpdate }) => {
     }));
   };
 
-  // Handle data updates
-  const updateData = (data) => {
-    if (onDataUpdate) {
-      onDataUpdate(data, selectedFilters, searchType);
-    }
-  };
-
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showDropdown && !event.target.closest('.search-container')) {
@@ -124,38 +170,22 @@ const SearchBar = ({ onFilterSelect, onDataUpdate }) => {
       {items.map((item, idx) => (
         <div 
           key={idx} 
-          className="px-4 py-1.5 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
+          className="px-4 py-1.5 hover:bg-gray-100 cursor-pointer text-sm text-gray-700 flex items-center justify-between"
           onClick={() => handleSelectResult({ name: item, category })}
         >
-          {item}
+          <span>{item}</span>
+          {specialFilters.sortable.includes(item) && (
+            <ArrowUpDown className="h-4 w-4 text-gray-400" />
+          )}
         </div>
       ))}
     </div>
   );
 
-
   return (
     <div className="search-container relative w-72">
       {/* Selected Filters Display */}
-      {selectedFilters.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {/* {selectedFilters.map((filter, index) => (
-            <div 
-              key={index}
-              className="flex items-center gap-2 px-3 py-1 bg-blue-100 rounded-full text-sm text-blue-700"
-            >
-              {filter.name}
-              <button 
-                onClick={() => handleRemoveFilter(filter)}
-                className="hover:text-blue-900"
-              >
-                ×
-              </button>
-            </div>
-          ))} */}
-        </div>
-      )}
-
+     
       {/* Search Bar and Dropdown */}
       <div className="relative bg-white border border-gray-200 rounded-lg shadow">
         <div className="p-2">
@@ -200,60 +230,56 @@ const SearchBar = ({ onFilterSelect, onDataUpdate }) => {
             )}
 
             {/* Search Results */}
-            {search && (
-              <div>
-                {searchResults.length > 0 ? (
-                  <div className="p-2">
-                    <div className="text-xs font-semibold text-gray-500 px-2 py-1">
-                      SEARCH RESULTS
-                    </div>
-                    {searchResults.map((result, index) => (
-                      <div
-                        key={`search-${index}`}
-                        className="px-2 py-2 hover:bg-gray-100 cursor-pointer rounded"
-                        onClick={() => handleSelectResult(result)}
-                      >
-                        <div className="font-medium">{result.name}</div>
-                        <div className="text-sm text-gray-500">{result.category}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 text-center text-gray-500">
-                    No results found for "{search}"
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Filters */}
-            {!search && (
-              <>
-                <div className="border-b border-gray-200">
-                  <div className="px-4 py-2 text-sm font-semibold text-gray-700">
-                    Filters
-                  </div>
-                  <div className="space-y-1">
-                    {actionCategories.map((category, index) => (
-                      <div key={index}>
-                        <div 
-                          className="px-4 py-1.5 hover:bg-gray-100 cursor-pointer flex items-center justify-between text-sm"
-                          onClick={() => toggleFilter(category.name)}
-                        >
-                          <span className="text-gray-900">{category.name}</span>
-                          {expandedFilters[category.name] ? 
-                            <ChevronDown className="h-4 w-4 text-gray-400" /> :
-                            <ChevronRight className="h-4 w-4 text-gray-400" />
-                          }
-                        </div>
-                        {expandedFilters[category.name] && (
-                          <FilterItemsComponent items={category.items} category={category.name} />
-                        )}
-                      </div>
-                    ))}
-                  </div>
+            {search && searchResults.length > 0 ? (
+              <div className="p-2">
+                <div className="text-xs font-semibold text-gray-500 px-2 py-1">
+                  SEARCH RESULTS
                 </div>
-              </>
+                {searchResults.map((result, index) => (
+                  <div
+                    key={`search-${index}`}
+                    className="px-2 py-2 hover:bg-gray-100 cursor-pointer rounded flex items-center justify-between"
+                    onClick={() => handleSelectResult(result)}
+                  >
+                    <div>
+                      <div className="font-medium">{result.name}</div>
+                      <div className="text-sm text-gray-500">{result.category}</div>
+                    </div>
+                    {specialFilters.sortable.includes(result.name) && (
+                      <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : search ? (
+              <div className="p-4 text-center text-gray-500">
+                No results found for `{search}`
+              </div>
+            ) : (
+              <div className="border-b border-gray-200">
+                <div className="px-4 py-2 text-sm font-semibold text-gray-700">
+                  Filters
+                </div>
+                <div className="space-y-1">
+                  {actionCategories.map((category, index) => (
+                    <div key={index}>
+                      <div 
+                        className="px-4 py-1.5 hover:bg-gray-100 cursor-pointer flex items-center justify-between text-sm"
+                        onClick={() => toggleFilter(category.name)}
+                      >
+                        <span className="text-gray-900">{category.name}</span>
+                        {expandedFilters[category.name] ? 
+                          <ChevronDown className="h-4 w-4 text-gray-400" /> :
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
+                        }
+                      </div>
+                      {expandedFilters[category.name] && (
+                        <FilterItemsComponent items={category.items} category={category.name} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         )}

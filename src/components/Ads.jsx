@@ -87,8 +87,12 @@ const Ads = ({
         if (rule.field !== 'ad_name') {
           return true;
         }
-        const adName = (ad.adName || "").toLowerCase();
-        const searchValue = (rule.value || "").toLowerCase();
+        const adName = (ad.adName || "").trim().toLowerCase();
+        const searchValue = (rule.value || "").trim().toLowerCase();
+        
+        if (!searchValue) {
+          return true;
+        }
 
         switch (rule.condition) {
           case "Contains":

@@ -63,9 +63,12 @@ const Campaign = ({ fetchedData }) => {
           return true;
         }
 
-        const campaignName = (campaign.campaignName || '').toLowerCase();
-        const searchValue = (rule.value || "").toLowerCase();
+        const campaignName = (campaign.campaignName || '').trim().toLowerCase();
+        const searchValue = (rule.value || "").trim().toLowerCase();
 
+        if (!searchValue) {
+          return true;
+        }
         switch (rule.condition) {
           case "Contains":
             return campaignName.includes(searchValue);

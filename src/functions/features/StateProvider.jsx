@@ -34,6 +34,7 @@ export default function StateProvider({ children }) {
   const [selectedBar, setSelectedBar] = useState("");
   const [selectedBarData, setSelectedBarData] = useState(0);
   const [selectedPresets, setSelectedPresets] = useState("Setup");
+  const [activeFilters, setActiveFilters] = useState([]);
 
   const [customColumn, setCustomColumn] = useState()
 
@@ -49,6 +50,10 @@ useEffect(()=>{
    const presets =  sortPresets(selectedPresets);
    setCustomColumn(presets)
   }, [selectedPresets]);
+  useEffect(()=>{
+    console.log('refreshed here ')
+
+  }, [activeFilters])
 
   useEffect(()=>{
     const fetchAds = async()=>{
@@ -65,7 +70,7 @@ useEffect(()=>{
 
   }, [selectedBar, setSelectedBar])
   return (
-    <StateContext.Provider value={{ state, setState, setCustomColumn, customColumn, selectedPresets, setSelectedPresets, setSelectedBar,selectedBarData,setSelectedBarData, selectedBar}}>
+    <StateContext.Provider value={{ state, setState, setCustomColumn, customColumn, selectedPresets,setActiveFilters,activeFilters,  setSelectedPresets, setSelectedBar,selectedBarData,setSelectedBarData, selectedBar}}>
       {children}
     </StateContext.Provider>
   );

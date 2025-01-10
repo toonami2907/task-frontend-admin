@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 
-const words = ["Exploring", "Traveling", "Discovering", "Adventuring"];
+const words = ["Welcome Loading your Ads Data", "Launching Dashboard", ];
 
 // export  const Errortoster = ({message})=> {
 //   toast(message, {

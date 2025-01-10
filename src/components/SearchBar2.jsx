@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { Search, X, ChevronDown } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useGlobalContext } from "@/functions/features/StateProvider";
 
-const SearchBar2 = ({ onFilterApply }) => {
+const SearchBar2 = () => {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [filters, setFilters] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState(null);
+  const { setActiveFilters, activeFilters } = useGlobalContext();
   const [tempFilter, setTempFilter] = useState({
     field: "campaign_name",
     label: "Campaign name",
@@ -25,7 +27,14 @@ const SearchBar2 = ({ onFilterApply }) => {
     { label: "Ad name", field: "ad_name", value: query },
   ];
 
-  const handleAddFilter = (category) => {
+  // Sync with initial activeFilters
+  useEffect(() => {
+    if (activeFilters && activeFilters.length > 0 && filters.length === 0) {
+      setFilters(activeFilters);
+    }
+  }, []);
+
+  const handleAddFilter = useCallback((category) => {
     setTempFilter({
       field: category.field,
       label: category.label,
@@ -36,18 +45,16 @@ const SearchBar2 = ({ onFilterApply }) => {
     setDialogOpen(true);
     setQuery("");
     setOpen(false);
-  };
+  }, [query]);
 
-  const handleApplyFilter = () => {
+  const handleApplyFilter = useCallback(() => {
     if (selectedFilter !== null) {
-      // Update existing filter
       setFilters((prev) => 
         prev.map((filter, index) => 
           index === selectedFilter ? { ...tempFilter, id: filter.id } : filter
         )
       );
     } else {
-      // Add new filter
       const isDuplicate = filters.some(
         (filter) =>
           filter.field === tempFilter.field &&
@@ -65,28 +72,27 @@ const SearchBar2 = ({ onFilterApply }) => {
         ]);
       }
     }
-  
     setDialogOpen(false);
     setSelectedFilter(null);
-  };
+  }, [selectedFilter, tempFilter, filters]);
 
-  const handleRemoveFilter = (index) => {
+  const handleRemoveFilter = useCallback((index) => {
     setFilters((prev) => prev.filter((_, i) => i !== index));
-  };
+  }, []);
 
-  const handleFilterClick = (filter, index) => {
+  const handleFilterClick = useCallback((filter, index) => {
     setSelectedFilter(index);
     setTempFilter(filter);
     setDialogOpen(true);
-  };
+  }, []);
 
+  // Update global filters
   useEffect(() => {
-    onFilterApply(filters);
-  }, [filters, onFilterApply]);
+    setActiveFilters(filters);
+  }, [filters, setActiveFilters]);
 
   return (
-    <div className="w-full max-w-2xl relative font-sans">
-      {/* Search Input */}
+    <div className="w-full max-w-screen-xl mb-2 relative font-sans">
       <div className="relative">
         <div className="flex items-center border border-gray-300 rounded-3xl bg-white">
           <div className="flex flex-wrap gap-2 p-2 w-full">
@@ -96,7 +102,10 @@ const SearchBar2 = ({ onFilterApply }) => {
                 className="flex items-center gap-2 bg-gray-200 text-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleFilterClick(filter, index)}
               >
-                <span className="text-sm">{filter.label} {filter.condition} <span className='text-black font-bold'>{filter.value}</span></span>
+                <span className="text-sm">
+                  {filter.label}  {filter.condition} {" "}
+                  <span className="text-black font-bold">{filter.value}</span>
+                </span>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -108,12 +117,11 @@ const SearchBar2 = ({ onFilterApply }) => {
                 </button>
               </div>
             ))}
-            <div className="flex items-center flex-1 min-w-[200px]">
-              <Search className="h-4 w-4 text-gray-400 ml-2" />
+            <div className="flex items-center flex-1 max-w-[200px]">
               <input
                 type="text"
-                className="w-full px-2 py-1.5 bg-transparent border-none focus:ring-0 text-sm"
-                placeholder="Search"
+                className="w-full px-2 py-1.5 bg-transparent rounded-3xl border-none focus:ring-0 text-sm"
+                placeholder="Search by name, ID, metric"
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
@@ -124,7 +132,6 @@ const SearchBar2 = ({ onFilterApply }) => {
           </div>
         </div>
 
-        {/* Suggestions Dropdown */}
         {open && query && (
           <Card className="absolute w-full border border-gray-300 border-t-0 rounded-t-none rounded-b-lg shadow-lg z-50 bg-white">
             <div className="p-3 text-sm text-gray-500">
@@ -139,7 +146,7 @@ const SearchBar2 = ({ onFilterApply }) => {
                 >
                   <div className="text-sm">{category.label}</div>
                   <div className="text-sm text-gray-500">
-                    contains <span className="text-blue-600">{query}</span>
+                    contains <span className="text-blue-600"> {query} </span>
                   </div>
                 </div>
               ))}
@@ -148,9 +155,9 @@ const SearchBar2 = ({ onFilterApply }) => {
         )}
       </div>
 
-      {/* Filter Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md p-0">
+          <DialogTitle></DialogTitle>
           <div className="p-4 space-y-4">
             <h2 className="text-lg font-semibold">{tempFilter.label}</h2>
             <div className="flex gap-2">
@@ -212,9 +219,7 @@ const SearchBar2 = ({ onFilterApply }) => {
               >
                 Cancel
               </Button>
-              <Button
-                onClick={handleApplyFilter}
-              >
+              <Button onClick={handleApplyFilter}>
                 Apply
               </Button>
             </div>

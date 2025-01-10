@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import React, { useState } from "react";
+import React, { useState, useEffect} from "react";
 import axios from "axios";
 import {
   Table,
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "./ui/switch";
 import { Link } from "lucide-react";
-import { API_URL } from "@/functions/features/StateProvider";
+import { API_URL, useGlobalContext} from "@/functions/features/StateProvider";
 
 const Ads = ({
   previewImage,
@@ -21,6 +21,7 @@ const Ads = ({
   getAdLink,
 }) => {
   const [adsData, setAdsData] = useState(initialAdsData);
+  const { activeFilters } = useGlobalContext();
 
   const handleStatusChange = async (adId, newStatus) => {
     try {
@@ -28,7 +29,6 @@ const Ads = ({
       await axios.post(endpoint, { status: newStatus });
       console.log(`Ad ${adId} status updated to ${newStatus}`);
 
-      // Update the status locally
       setAdsData((prevAds) =>
         prevAds.map((ad) =>
           ad.adId === adId ? { ...ad, status: newStatus } : ad
@@ -39,19 +39,42 @@ const Ads = ({
     }
   };
 
-  console.log(
-    "link",
-    adsData.map((ad) => {
-      if (ad.creative) {
-        return ad.creative.objectStorySpec.link_data;
-      }
-    })
-  );
+  // Update local state when prop changes
+  useEffect(() => {
+    setAdsData(initialAdsData);
+  }, [initialAdsData]);
+
+  // Filter ads based on active filters
+  useEffect(() => {
+    if (!activeFilters || activeFilters.length === 0) {
+      setAdsData(initialAdsData);
+      return;
+    }
+
+    const filtered = initialAdsData.filter((ad) => {
+      return activeFilters.some((rule) => {
+        const adName = (ad.adName || "").toLowerCase();
+        const searchValue = (rule.value || "").toLowerCase();
+
+        switch (rule.condition) {
+          case "Contains":
+            return adName.includes(searchValue);
+          case "Doesn`t contain":
+            return !adName.includes(searchValue);
+          default:
+            return true;
+        }
+      });
+    });
+
+    setAdsData(filtered);
+  }, [activeFilters, initialAdsData]);
+
   const getFbPixel = (trackingSpecs) => {
     if (!trackingSpecs || !Array.isArray(trackingSpecs)) {
       return [];
     }
-    const pixelSpec = trackingSpecs.find(spec => spec['fb_pixel']);
+    const pixelSpec = trackingSpecs.find((spec) => spec["fb_pixel"]);
     return pixelSpec?.fb_pixel || [];
   };
   
@@ -119,7 +142,7 @@ const Ads = ({
                         />
                       </div>
                       <span
-                        className="text-sm truncate max-w-[150px]"
+                        className="text-sm  min-w-[150px]"
                         title={ads.adName}
                       >
                         {ads.adName}

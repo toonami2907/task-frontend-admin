@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import React, { useEffect, useState } from "react";
 import {
   Table,
@@ -10,34 +11,27 @@ import {
 import { API_URL, useGlobalContext } from "@/functions/features/StateProvider";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import toast from "react-hot-toast";
 import axios from "axios";
 import StyledDropdown from "./StyledDropdown";
 import DeliveryBar from "./DeliveryBar";
-import { Link, Loader2 } from "lucide-react";
+import {  Loader2 } from "lucide-react";
 import NoAds from "@/components/NoAds"; // Assuming NoAds is located here
 import Campaign from "./Campaign";
 import Ads from "./Ads";
-import SearchBar from "./SearchBar";
 import AdsCalendarDialog from "./AdsCalendarDialog";
 import SearchBar2 from "./SearchBar2";
 
 const AdsManager = ({ selectedBar, setSelectedBar }) => {
-  const [viewMode, setViewMode] = useState("table");
   const [campaignNames, setCampaignNames] = useState({});
   const [fetchedData, setFetchData] = useState([]);
   const [selectedAds, setSelectedAds] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { state, customColumn } = useGlobalContext();
+  const { state, customColumn} = useGlobalContext();
 
-  const [activeFilters, setActiveFilters] = useState([]);
 
-  const applyFilters = (filters) => {
-    setActiveFilters(filters);
-    console.log("Active Filters:", filters);
-  };
+
 
   const LoadingSpinner = () => (
     <div className="flex items-center justify-center w-full py-8">
@@ -142,14 +136,14 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
     }
   }, [fetchedData]);
 
-  const FetchSelectedTabs = async (tabs, adSetId) => {
-    localStorage.setItem("selectedBar", tabs);
-    if (tabs === "Ads set") {
-      const data = await fetchAdsSetById(adSetId);
-      return data;
-    }
-    return "No data available";
-  };
+  // const FetchSelectedTabs = async (tabs, adSetId) => {
+  //   localStorage.setItem("selectedBar", tabs);
+  //   if (tabs === "Ads set") {
+  //     const data = await fetchAdsSetById(adSetId);
+  //     return data;
+  //   }
+  //   return "No data available";
+  // };
 
   const FetchAdsById = async (adId) => {
     try {
@@ -229,11 +223,16 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
 
   const adsData = selectedAds.length > 0 ? selectedAds : fetchedData;
 
+  // Move the SortSearch function outside the component for better organization
+
+
+
+
   return (
     <div className="w-full py-4 bg-inherit px-0 font-sans">
       {/* Top Navigation */}
-      <div className="flex items-center justify-between px-5 pb-2">
-        <SearchBar2 onFilterApply={applyFilters} />
+      <div className="flex-col  items-center justify-between  px-5 pb-2">
+        <SearchBar2  />
         {/* <SearchBar
         onFilterApply={applyFilters}
         /> */}

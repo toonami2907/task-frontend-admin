@@ -12,20 +12,23 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { API_URL} from "@/functions/features/StateProvider";
+import toast from "react-hot-toast";
 
 const Campaign = ({ fetchedData }) => {
   const [campaignData, setCampaignData] = useState(fetchedData);
 
   const handleSwitchToggle = async (campaignId, newStatus) => {
     try {
-      console.log("Sending status update:", { campaignId, status: newStatus });
      const response = await axios.post(`${API_URL}/auth/pause/${campaignId}`, {
         status: newStatus,
       });
-      // console.log(`Campaign ${campaignId} status updated to ${newStatus}`);
-      // console.log(`response`, response.data);
+      if(response.status === 200){
+        toast.success(`Campaign status has be set ${newStatus}`, {
+          position: "bottom-right",
+          duration: 5000,
+        });
+      }
 
-      // Update the local state to reflect the new status
       setCampaignData((prevData) =>
         prevData.map((campaign) =>
           campaign.campaignId === campaignId

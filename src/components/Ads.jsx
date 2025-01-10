@@ -10,7 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Switch } from "./ui/switch";
+import { Checkbox } from "./ui/checkbox";
 import { Link } from "lucide-react";
+import NoAd from './NoAd'
 import { API_URL, useGlobalContext} from "@/functions/features/StateProvider";
 
 const Ads = ({
@@ -22,6 +24,32 @@ const Ads = ({
 }) => {
   const [adsData, setAdsData] = useState(initialAdsData);
   const { activeFilters } = useGlobalContext();
+  const [selectedAds, setSelectedAds] = useState({});
+  const [selectAll, setSelectAll] = useState(false);
+
+  const handleSelectAll = (checked) => {
+    setSelectAll(checked);
+    const newSelectedAds = {};
+    adsData.forEach((ad) => {
+      newSelectedAds[ad.adId] = checked;
+    });
+    setSelectedAds(newSelectedAds);
+  };
+
+  const handleSelectSingle = (adId, checked) => {
+    setSelectedAds((prev) => ({
+      ...prev,
+      [adId]: checked,
+    }));
+    
+    // Update selectAll state based on whether all ads are selected
+    const updatedSelected = {
+      ...selectedAds,
+      [adId]: checked,
+    };
+    const allSelected = adsData.every((ad) => updatedSelected[ad.adId]);
+    setSelectAll(allSelected);
+  };
 
   const handleStatusChange = async (adId, newStatus) => {
     try {
@@ -42,6 +70,9 @@ const Ads = ({
   // Update local state when prop changes
   useEffect(() => {
     setAdsData(initialAdsData);
+    // Reset selection state when data changes
+    setSelectedAds({});
+    setSelectAll(false);
   }, [initialAdsData]);
 
   // Filter ads based on active filters
@@ -53,6 +84,9 @@ const Ads = ({
 
     const filtered = initialAdsData.filter((ad) => {
       return activeFilters.some((rule) => {
+        if (rule.field !== 'ad_name') {
+          return true;
+        }
         const adName = (ad.adName || "").toLowerCase();
         const searchValue = (rule.value || "").toLowerCase();
 
@@ -78,6 +112,9 @@ const Ads = ({
     return pixelSpec?.fb_pixel || [];
   };
   
+  if (!adsData || adsData.length === 0) {
+    return <NoAd />;
+  }
 
   return (
     <div>
@@ -86,8 +123,11 @@ const Ads = ({
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead className="w-5 select-none border-r">
-                  <input type="checkbox" />
+                <TableHead className="w-5 select-none ">
+                  <Checkbox 
+                    checked={selectAll}
+                    onCheckedChange={handleSelectAll}
+                  />
                 </TableHead>
                 <TableHead className="w-20 select-none border-r">
                   <div className="flex items-center">Off/On</div>
@@ -115,8 +155,11 @@ const Ads = ({
                   key={idx}
                   className="group hover:bg-gray-50 transition-colors"
                 >
-                  <TableCell className="w-5 border-r">
-                    <input type="checkbox" />
+                  <TableCell className="w-5 ">
+                    <Checkbox
+                      checked={selectedAds[ads.adId] || false}
+                      onCheckedChange={(checked) => handleSelectSingle(ads.adId, checked)}
+                    />
                   </TableCell>
                   <TableCell className="w-20 border-r">
                     <Switch
@@ -165,7 +208,7 @@ const Ads = ({
                         case "Campaign ID":
                           return ads.campaignId;
                         case "Budget":
-                          return ads.dailyBudget || 0;
+                          return ads.dailyBudget /100 || 0;
                         case "URL parameters":
                           return ads.creative?.urlTags;
                         case "Objective":
@@ -178,7 +221,6 @@ const Ads = ({
                                   pixels.map((pixel, index) => (
                                     <span 
                                       key={index}
-                                     
                                     >
                                       (ID:{pixel})
                                     </span>
@@ -191,7 +233,6 @@ const Ads = ({
                         case "Preview link":
                           return ads.preview_shareable_link;
                         case "Link (ad settings)":
-                          // Safely access objectStorySpec using optional chaining
                           return (
                             ads.creative?.objectStorySpec?.link_data?.link ||
                             "—"

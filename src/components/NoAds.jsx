@@ -11,7 +11,7 @@ const NoAds = ({state}) => {
             <Plus size={30} color='white'/>
           </button>
         </div>
-          <h1 className='font-bold font-bold '>No results found</h1>
+          <h1 className=' font-bold '>No results found</h1>
           <p>You haven`t created any ads yet.</p>
           <Button
           onClick={() => window.location.reload()}

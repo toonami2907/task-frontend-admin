@@ -21,6 +21,7 @@ import Campaign from "./Campaign";
 import Ads from "./Ads";
 import AdsCalendarDialog from "./AdsCalendarDialog";
 import SearchBar2 from "./SearchBar2";
+import NoAdsset from './NoAdsset'
 
 const AdsManager = ({ selectedBar, setSelectedBar }) => {
   const [campaignNames, setCampaignNames] = useState({});
@@ -28,7 +29,8 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
   const [selectedAds, setSelectedAds] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { state, customColumn} = useGlobalContext();
+  const { state, customColumn, activeFilters} = useGlobalContext();
+  const [originalData, setOriginalData] = useState([]);
 
 
 
@@ -59,6 +61,7 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
             break;
         }
         const response = await axios.get(endpoint, { withCredentials: true });
+        setOriginalData(response.data);
         setFetchData(response.data);
       } catch (error) {
         console.log(error.message);
@@ -136,14 +139,6 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
     }
   }, [fetchedData]);
 
-  // const FetchSelectedTabs = async (tabs, adSetId) => {
-  //   localStorage.setItem("selectedBar", tabs);
-  //   if (tabs === "Ads set") {
-  //     const data = await fetchAdsSetById(adSetId);
-  //     return data;
-  //   }
-  //   return "No data available";
-  // };
 
   const FetchAdsById = async (adId) => {
     try {
@@ -221,9 +216,43 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
 
   const hasData = (data) => Array.isArray(data) && data.length > 0;
 
-  const adsData = selectedAds.length > 0 ? selectedAds : fetchedData;
+  const adsData = selectedAds.length > 0 ? selectedAds : originalData;
 
-  // Move the SortSearch function outside the component for better organization
+  useEffect(() => {
+    if (!activeFilters || activeFilters.length === 0) {
+      setFetchData(originalData);
+      return;
+    }
+  
+    const filtered = originalData.filter((adsset) => {
+      return activeFilters.some((rule) => {
+        if (rule.field !== 'adset_name') {
+          return true;
+        }
+  
+        // Trim whitespace and convert to lowercase for consistent comparison
+        const adsetName = (adsset.adSetName || '').trim().toLowerCase();
+        const searchValue = (rule.value || '').trim().toLowerCase();
+        
+        // Skip empty search values
+        if (!searchValue) {
+          return true;
+        }
+  
+        switch (rule.condition) {
+          case "Contains":
+            return adsetName.includes(searchValue);
+          case "Doesn`t contain":
+            return !adsetName.includes(searchValue);
+          default:
+            return true;
+        }
+      });
+    });
+  
+    setFetchData(filtered);
+  }, [activeFilters, originalData]);
+  
 
 
 
@@ -233,10 +262,6 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
       {/* Top Navigation */}
       <div className="flex-col  items-center justify-between  px-5 pb-2">
         <SearchBar2  />
-        {/* <SearchBar
-        onFilterApply={applyFilters}
-        /> */}
-
         <div className="flex items-center justify-end space-x-4">
           <AdsCalendarDialog />
           <StyledDropdown />
@@ -250,9 +275,10 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
       ) : hasData(adsData) ? (
         <Table>
           {/* Render table based on `state` */}
-          {state === "Campaign" && <Campaign fetchedData={fetchedData} />}
+          {state === "Campaign" && <Campaign fetchedData={originalData} />}
           {state === "Ads Set" && (
             <>
+            {!fetchedData || fetchedData.length === 0 ? <NoAdsset /> : <>
               <TableHeader>
                 <TableRow className="bg-gray-50 h-10">
                   <TableHead className="w-12 p-2 select-none border-r">
@@ -371,6 +397,8 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
                   </TableRow>
                 ))}
               </TableBody>
+
+            </> }
             </>
           )}
           {state === "Ads" && (

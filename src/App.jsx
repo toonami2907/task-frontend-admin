@@ -25,13 +25,12 @@ const App = () => {
   return (
     <div className=''>
       <div className='w-full pr-5 justify-end items-end flex'>
-      <AdsCalendarDialog/>
       </div>
       <div className="my-5">
-      <SearchBar 
+      {/* <SearchBar 
       onFilterSelect={handleFilterSelect}
       onDataUpdate={handleDataUpdate}
-    />
+    /> */}
     </div>
     <div className=' relative my-10 bg-inherit min-w-screen w-full'>
       <MyTabs selectedBarLength={barData.length} SelectedBarState={setBarData}/>

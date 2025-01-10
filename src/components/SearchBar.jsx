@@ -1,286 +1,186 @@
-import React, { useState, useEffect } from 'react';
-import { Search, ChevronRight, ChevronDown, ArrowUpDown } from 'lucide-react';
-import { actionCategories } from '@/functions/resources/arrays';
+import React, { useState, useEffect } from "react";
+import { Search, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const STORAGE_KEYS = {
-  RECENT_SEARCHES: 'recent_searches',
-  SELECTED_FILTERS: 'selected_filters',
-  SORT_PREFERENCE: 'sort_preference'
-};
-
-const SearchBar = ({ onFilterSelect, onDataUpdate }) => {
-  const [search, setSearch] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [recentSearches, setRecentSearches] = useState(() => {
-    const stored = localStorage.getItem(STORAGE_KEYS.RECENT_SEARCHES);
-    return stored ? JSON.parse(stored) : [];
-  });
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [expandedFilters, setExpandedFilters] = useState({});
-  const [selectedFilters, setSelectedFilters] = useState(() => {
-    const stored = localStorage.getItem(STORAGE_KEYS.SELECTED_FILTERS);
-    return stored ? JSON.parse(stored) : [];
-  });
-  const [searchType, setSearchType] = useState(null);
-  const [sortConfig, setSortConfig] = useState(() => {
-    const stored = localStorage.getItem(STORAGE_KEYS.SORT_PREFERENCE);
-    return stored ? JSON.parse(stored) : { field: null, direction: 'asc' };
+const SearchBar = ({ onFilterApply }) => {
+  const [query, setQuery] = useState("");
+  const [isSearchMode, setIsSearchMode] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [filters, setFilters] = useState([]);
+  const [tempFilter, setTempFilter] = useState({
+    field: "campaign_name",
+    label: "Campaign name",
+    condition: "Contains",
+    value: ""
   });
 
-  const specialFilters = {
-    ids: ['Ad ID', 'Ad set ID', 'Campaign ID', 'Account ID'],
-    names: ['Ad name', 'Ad Set Name', 'Campaign name', 'Account name'],
-    sortable: ['Amount spent', 'Impression', 'Reach', 'Clicks', 'CTR']
-  };
+  const searchCategories = [
+    { label: "Campaign name", field: "campaign_name" },
+    { label: "Ad set name", field: "adset_name" },
+    { label: "Ad name", field: "ad_name" },
+  ];
 
-  // Persist selected filters to localStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SELECTED_FILTERS, JSON.stringify(selectedFilters));
-  }, [selectedFilters]);
-
-  // Persist recent searches to localStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.RECENT_SEARCHES, JSON.stringify(recentSearches));
-  }, [recentSearches]);
-
-  // Persist sort preference to localStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SORT_PREFERENCE, JSON.stringify(sortConfig));
-  }, [sortConfig]);
-
-  const findMatches = (searchTerm) => {
-    if (!searchTerm) return [];
-    
-    const results = [];
-    actionCategories.forEach(category => {
-      category.items.forEach(item => {
-        if (item.toLowerCase().includes(searchTerm.toLowerCase())) {
-          results.push({
-            name: item,
-            category: category.name
-          });
-        }
-      });
+  const handleAddFilter = (category) => {
+    setTempFilter({
+      field: category.field,
+      label: category.label,
+      condition: "Contains",
+      value: query
     });
-    return results;
+    setIsSearchMode(false);
+    setQuery("");
+    setOpen(false);
   };
 
-  const getFilterType = (filterName) => {
-    if (specialFilters.ids.includes(filterName)) return 'id';
-    if (specialFilters.names.includes(filterName)) return 'name';
-    if (specialFilters.sortable.includes(filterName)) return 'sortable';
-    return 'regular';
+  const handleApplyFilter = () => {
+    setFilters(prev => [...prev, {
+      ...tempFilter,
+      id: Math.random().toString(36).substr(2, 9),
+    }]);
+    setIsSearchMode(true);
+  };
+
+  const handleRemoveFilter = (index) => {
+    setFilters((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleFilterClick = (filter) => {
+    setTempFilter(filter);
+    setIsSearchMode(false);
   };
 
   useEffect(() => {
-    if (search) {
-      const matches = findMatches(search);
-      setSearchResults(matches);
-    } else {
-      setSearchResults([]);
-    }
-  }, [search]);
-
-  const handleSelectResult = (result) => {
-    const filterType = getFilterType(result.name);
-    
-    setSearch(result.name);
-    setShowDropdown(false);
-    setSearchType(filterType);
-    
-    // Add to selected filters if not already present
-    setSelectedFilters(prev => {
-      if (!prev.find(f => f.name === result.name)) {
-        const newFilters = [...prev, result];
-        if (onFilterSelect) {
-          onFilterSelect(newFilters, filterType);
-        }
-        return newFilters;
-      }
-      return prev;
-    });
-    
-    // Add to recent searches
-    setRecentSearches(prev => {
-      const newSearches = prev.filter(item => item.name !== result.name);
-      return [result, ...newSearches].slice(0, 5);
-    });
-
-    // Handle sort if it's a sortable field
-    if (filterType === 'sortable') {
-      setSortConfig({
-        field: result.name,
-        direction: 'desc'
-      });
-      if (onDataUpdate) {
-        onDataUpdate({ sortField: result.name, sortDirection: 'desc' });
-      }
-    }
-  };
-
-  const handleRemoveFilter = (filter) => {
-    setSelectedFilters(prev => {
-      const newFilters = prev.filter(f => f.name !== filter.name);
-      if (onFilterSelect) {
-        onFilterSelect(newFilters, getFilterType(filter.name));
-      }
-      return newFilters;
-    });
-
-    // Clear sort if removing sorted field
-    if (sortConfig.field === filter.name) {
-      setSortConfig({ field: null, direction: 'asc' });
-      if (onDataUpdate) {
-        onDataUpdate({ sortField: null, sortDirection: 'asc' });
-      }
-    }
-  };
-
-  const toggleSort = (field) => {
-    const newDirection = sortConfig.field === field && sortConfig.direction === 'asc' ? 'desc' : 'asc';
-    setSortConfig({
-      field,
-      direction: newDirection
-    });
-    if (onDataUpdate) {
-      onDataUpdate({ sortField: field, sortDirection: newDirection });
-    }
-  };
-
-  const toggleFilter = (filterName) => {
-    setExpandedFilters(prev => ({
-      ...prev,
-      [filterName]: !prev[filterName]
-    }));
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showDropdown && !event.target.closest('.search-container')) {
-        setShowDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showDropdown]);
-
-  const FilterItemsComponent = ({ items, category }) => (
-    <div className="pl-4 py-1 space-y-1 bg-gray-50">
-      {items.map((item, idx) => (
-        <div 
-          key={idx} 
-          className="px-4 py-1.5 hover:bg-gray-100 cursor-pointer text-sm text-gray-700 flex items-center justify-between"
-          onClick={() => handleSelectResult({ name: item, category })}
-        >
-          <span>{item}</span>
-          {specialFilters.sortable.includes(item) && (
-            <ArrowUpDown className="h-4 w-4 text-gray-400" />
-          )}
-        </div>
-      ))}
-    </div>
-  );
+    onFilterApply(filters);
+  }, [filters, onFilterApply]);
 
   return (
-    <div className="search-container relative w-72">
-      {/* Selected Filters Display */}
-     
-      {/* Search Bar and Dropdown */}
-      <div className="relative bg-white border border-gray-200 rounded-lg shadow">
-        <div className="p-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setShowDropdown(true);
-              }}
-              onFocus={() => setShowDropdown(true)}
-              placeholder="Search by name, ID or metrics"
-              className="w-full pl-10 pr-4 py-1.5 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            />
+    <div className="w-full max-w-2xl relative font-sans">
+      <div className="relative">
+        <div className="border border-gray-300 rounded-lg bg-white shadow-sm">
+          <div className="flex flex-wrap gap-2 p-2 w-full">
+            {filters.map((filter, index) => (
+              <div
+                key={filter.id}
+                className="flex items-center gap-2 bg-blue-100 text-blue-700 rounded px-2 py-1 cursor-pointer hover:bg-blue-200 transition-colors"
+                onClick={() => handleFilterClick(filter)}
+              >
+                <span className="text-sm font-medium">{filter.label} {filter.condition} {filter.value}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveFilter(index);
+                  }}
+                  className="hover:bg-blue-300 rounded-full p-0.5 transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+
+            {isSearchMode ? (
+              <div className="flex items-center flex-1 min-w-[200px]">
+                <Search className="h-4 w-4 text-gray-400 ml-2" />
+                <input
+                  type="text"
+                  className="w-full px-2 py-1.5 bg-transparent border-none focus:ring-0 text-sm"
+                  placeholder="Search"
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setOpen(e.target.value.length > 0);
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="flex-1 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={tempFilter.field}
+                    onValueChange={(value) => {
+                      const category = searchCategories.find(cat => cat.field === value);
+                      setTempFilter(prev => ({
+                        ...prev,
+                        field: value,
+                        label: category.label
+                      }));
+                    }}
+                  >
+                    <SelectTrigger className="h-9 border-gray-300 bg-white hover:bg-gray-50 transition-colors">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {searchCategories.map((category) => (
+                        <SelectItem key={category.field} value={category.field}>
+                          {category.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={tempFilter.condition}
+                    onValueChange={(value) => setTempFilter(prev => ({ ...prev, condition: value }))}
+                  >
+                    <SelectTrigger className="h-9 border-gray-300 bg-white hover:bg-gray-50 transition-colors">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Contains">Contains</SelectItem>
+                      <SelectItem value="Doesn`t contain">Doesn`t contain</SelectItem>
+
+                    </SelectContent>
+                  </Select>
+
+                  <input
+                    type="text"
+                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    value={tempFilter.value}
+                    onChange={(e) => setTempFilter(prev => ({ ...prev, value: e.target.value }))}
+                    placeholder="Enter value..."
+                  />
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-gray-300 hover:bg-gray-50 text-gray-700"
+                    onClick={() => setIsSearchMode(true)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={handleApplyFilter}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Dropdown Content */}
-        {showDropdown && (
-          <div className="absolute w-full left-0 bg-white border border-gray-200 rounded-lg shadow-lg max-h-[calc(100vh-200px)] overflow-y-auto z-[9999]">
-            {/* Recent Searches Section */}
-            {recentSearches.length > 0 && (
-              <div className="border-b border-gray-200">
-                <div className="px-4 py-2 text-sm font-semibold text-gray-700">
-                  Recent searches
-                </div>
-                <div className="space-y-1 pb-2">
-                  {recentSearches.map((item, index) => (
-                    <div 
-                      key={`recent-${index}`}
-                      className="px-4 py-1.5 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => handleSelectResult(item)}
-                    >
-                      <div className="text-sm text-gray-900">{item.name}</div>
-                      <div className="text-sm text-gray-500">{item.category}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Search Results */}
-            {search && searchResults.length > 0 ? (
-              <div className="p-2">
-                <div className="text-xs font-semibold text-gray-500 px-2 py-1">
-                  SEARCH RESULTS
-                </div>
-                {searchResults.map((result, index) => (
-                  <div
-                    key={`search-${index}`}
-                    className="px-2 py-2 hover:bg-gray-100 cursor-pointer rounded flex items-center justify-between"
-                    onClick={() => handleSelectResult(result)}
-                  >
-                    <div>
-                      <div className="font-medium">{result.name}</div>
-                      <div className="text-sm text-gray-500">{result.category}</div>
-                    </div>
-                    {specialFilters.sortable.includes(result.name) && (
-                      <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                    )}
+        {/* Suggestions Dropdown */}
+        {isSearchMode && open && query && (
+          <div className="absolute w-full border border-gray-300 border-t-0 rounded-b-lg shadow-lg z-50 bg-white">
+            <div className="p-3 text-sm font-medium text-gray-500">
+              Suggested searches
+            </div>
+            <div className="divide-y divide-gray-100">
+              {searchCategories.map((category) => (
+                <div
+                  key={category.field}
+                  className="px-3 py-2 hover:bg-gray-50 cursor-pointer flex justify-between transition-colors"
+                  onClick={() => handleAddFilter(category)}
+                >
+                  <div className="text-sm font-medium text-gray-900">{category.label}</div>
+                  <div className="text-sm text-gray-500">
+                    contains <span className="text-blue-600 font-medium">{query}</span>
                   </div>
-                ))}
-              </div>
-            ) : search ? (
-              <div className="p-4 text-center text-gray-500">
-                No results found for `{search}`
-              </div>
-            ) : (
-              <div className="border-b border-gray-200">
-                <div className="px-4 py-2 text-sm font-semibold text-gray-700">
-                  Filters
                 </div>
-                <div className="space-y-1">
-                  {actionCategories.map((category, index) => (
-                    <div key={index}>
-                      <div 
-                        className="px-4 py-1.5 hover:bg-gray-100 cursor-pointer flex items-center justify-between text-sm"
-                        onClick={() => toggleFilter(category.name)}
-                      >
-                        <span className="text-gray-900">{category.name}</span>
-                        {expandedFilters[category.name] ? 
-                          <ChevronDown className="h-4 w-4 text-gray-400" /> :
-                          <ChevronRight className="h-4 w-4 text-gray-400" />
-                        }
-                      </div>
-                      {expandedFilters[category.name] && (
-                        <FilterItemsComponent items={category.items} category={category.name} />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
         )}
       </div>

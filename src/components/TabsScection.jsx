@@ -7,13 +7,13 @@ const MyTabs = ({ selectedBarLength, SelectedBarState }) => {
   const { setState, state } = useGlobalContext();
 
   function handleTabChange(value) {
-    console.log(`Tab switched to: ${value}`);
+    // console.log(`Tab switched to: ${value}`);
     setState(value);
   }
 
   useEffect(() => {
     handleTabChange(state)
-    console.log("state", state);
+    // console.log("state", state);
   }, [state,selectedBarLength ]);
   return (
     <div className="">

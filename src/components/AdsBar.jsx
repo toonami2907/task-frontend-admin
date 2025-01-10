@@ -19,6 +19,9 @@ import { Link, Loader2 } from "lucide-react";
 import NoAds from "@/components/NoAds"; // Assuming NoAds is located here
 import Campaign from "./Campaign";
 import Ads from "./Ads";
+import SearchBar from "./SearchBar";
+import AdsCalendarDialog from "./AdsCalendarDialog";
+import SearchBar2 from "./SearchBar2";
 
 const AdsManager = ({ selectedBar, setSelectedBar }) => {
   const [viewMode, setViewMode] = useState("table");
@@ -28,6 +31,13 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const { state, customColumn } = useGlobalContext();
+
+  const [activeFilters, setActiveFilters] = useState([]);
+
+  const applyFilters = (filters) => {
+    setActiveFilters(filters);
+    console.log("Active Filters:", filters);
+  };
 
   const LoadingSpinner = () => (
     <div className="flex items-center justify-center w-full py-8">
@@ -223,8 +233,13 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
     <div className="w-full py-4 bg-inherit px-0 font-sans">
       {/* Top Navigation */}
       <div className="flex items-center justify-between px-5 pb-2">
-        <div />
+        <SearchBar2 onFilterApply={applyFilters} />
+        {/* <SearchBar
+        onFilterApply={applyFilters}
+        /> */}
+
         <div className="flex items-center justify-end space-x-4">
+          <AdsCalendarDialog />
           <StyledDropdown />
           <DeliveryBar />
         </div>
@@ -240,8 +255,8 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
           {state === "Ads Set" && (
             <>
               <TableHeader>
-                <TableRow className="border h-10">
-                  <TableHead className="w-12 p-2 select-none">
+                <TableRow className="bg-gray-50 h-10">
+                  <TableHead className="w-12 p-2 select-none border-r">
                     <Checkbox
                       checked={
                         fetchedData.length > 0 &&
@@ -258,24 +273,23 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
                       }}
                     />
                   </TableHead>
-                  <TableHead className="w-20 p-2 select-none">
+                  <TableHead className="w-20 p-2 select-none border-r">
                     <div className="flex items-center resize-x overflow-hidden">
                       Off/On
                     </div>
                   </TableHead>
-                  <TableHead className="text-lg font-medium p-2 min-w-[200px] select-none">
+                  <TableHead className="text-lg font-medium p-2 min-w-[200px] select-none border-r">
                     <div className="resize-x overflow-hidden">{state}</div>
                   </TableHead>
-                  <Separator orientation="vertical" className="h-8" />
-                  <TableHead className="font-bold min-w-[120px] select-none">
+                  <TableHead className="font-bold min-w-[120px] select-none border-r">
                     <div className="resize-x overflow-hidden">Delivery</div>
                   </TableHead>
-                  <TableHead className="font-bold min-w-[150px] select-none">
+                  <TableHead className="font-bold min-w-[150px] select-none border-r">
                     <div className="resize-x overflow-hidden flex justify-center">
                       Budget
                     </div>
                   </TableHead>
-                  <TableHead className="font-bold min-w-[120px] select-none">
+                  <TableHead className="font-bold min-w-[120px] select-none border-r">
                     <div className="resize-x overflow-hidden">Impression</div>
                   </TableHead>
                   <TableHead className="font-bold min-w-[120px] select-none">
@@ -289,7 +303,7 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
                     key={idx}
                     className="h-5 hover:bg-gray-50 transition-colors"
                   >
-                    <TableCell className="p-2 w-12">
+                    <TableCell className="p-2 w-12 border-r">
                       <Checkbox
                         checked={selectedBar?.includes(adsset.adSetId) || false}
                         onCheckedChange={() => {
@@ -307,10 +321,10 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
                         }}
                       />
                     </TableCell>
-                    <TableCell className="p-2 w-20">
+                    <TableCell className="p-2 w-20 border-r">
                       <Switch checked={true} />
                     </TableCell>
-                    <TableCell className="font-semibold hover:text-blue-700 cursor-pointer p-2 min-w-[200px]">
+                    <TableCell className="font-semibold hover:text-blue-700 cursor-pointer p-2 min-w-[200px] border-r">
                       <div className="space-y-1">
                         <p className="truncate">{adsset.adSetName}</p>
                         {adsset.ads && (
@@ -320,11 +334,28 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
                         )}
                       </div>
                     </TableCell>
-                    <Separator orientation="vertical" className="h-8" />
-                    <TableCell className="font-sans p-2 min-w-[120px]">
-                      <div className="truncate">{adsset.status}</div>
+                    <TableCell className="font-sans p-2 min-w-[120px] border-r">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            adsset.campaignStatus === "PAUSED"
+                              ? "bg-gray-400"
+                              : adsset.status === "ACTIVE"
+                              ? "bg-green-500"
+                              : "bg-gray-400"
+                          }`}
+                        ></div>
+                        <span>
+                          {adsset.campaignStatus === "PAUSED"
+                            ? "Campaign off"
+                            : adsset.status === "ACTIVE"
+                            ? "Active"
+                            : "Paused"}
+                        </span>
+                      </div>
                     </TableCell>
-                    <TableCell className="font-sans text-xs p-2 min-w-[150px]">
+
+                    <TableCell className="font-sans text-xs p-2 min-w-[150px] border-r">
                       <div className="flex flex-col items-center">
                         <h1 className="flex flex-col items-end">
                           <span>NGN {adsset.dailyBudget}</span>
@@ -332,11 +363,11 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
                         </h1>
                       </div>
                     </TableCell>
-                    <TableCell className="font-sans p-2 min-w-[120px]">
+                    <TableCell className="font-sans p-2 min-w-[120px] border-r">
                       <div className="truncate">{adsset.impression || 0}</div>
                     </TableCell>
                     <TableCell className="font-sans p-2 min-w-[120px]">
-                      <div className="truncate">{adsset.reach || "---"}</div>
+                      <div className="truncate">{adsset.reach || "—"}</div>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -3,6 +3,17 @@ import { useState, useEffect } from "react";
 
 const words = ["Exploring", "Traveling", "Discovering", "Adventuring"];
 
+// export  const Errortoster = ({message})=> {
+//   toast(message, {
+//     icon: <MessageCircle className="text-yellow-500" />,
+//     style: {
+//       background: 'red',
+//       color: '#fff',
+//       padding: '16px',
+//       borderRadius: '8px',
+//     },
+//   });
+//  } 
 const Laoding = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
 

@@ -1,4 +1,6 @@
-import React from "react";
+/* eslint-disable react/prop-types */
+import React, { useState } from "react";
+import axios from "axios";
 import {
   Table,
   TableBody,
@@ -7,59 +9,111 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Separator } from "./ui/separator";
 import { Switch } from "./ui/switch";
 import { Link } from "lucide-react";
+import { API_URL } from "@/functions/features/StateProvider";
 
-const Ads = ({previewImage, customColumn, adsData, setPreviewImage, getAdLink}) => {
+const Ads = ({
+  previewImage,
+  customColumn,
+  adsData: initialAdsData,
+  setPreviewImage,
+  getAdLink,
+}) => {
+  const [adsData, setAdsData] = useState(initialAdsData);
+
+  const handleStatusChange = async (adId, newStatus) => {
+    try {
+      const endpoint = `${API_URL}/auth/pause/ads/${adId}`;
+      await axios.post(endpoint, { status: newStatus });
+      console.log(`Ad ${adId} status updated to ${newStatus}`);
+
+      // Update the status locally
+      setAdsData((prevAds) =>
+        prevAds.map((ad) =>
+          ad.adId === adId ? { ...ad, status: newStatus } : ad
+        )
+      );
+    } catch (error) {
+      console.error(`Failed to update Ad ${adId} status:`, error.message);
+    }
+  };
+
+  console.log(
+    "link",
+    adsData.map((ad) => {
+      if (ad.creative) {
+        return ad.creative.objectStorySpec.link_data;
+      }
+    })
+  );
+  const getFbPixel = (trackingSpecs) => {
+    if (!trackingSpecs || !Array.isArray(trackingSpecs)) {
+      return [];
+    }
+    const pixelSpec = trackingSpecs.find(spec => spec['fb_pixel']);
+    return pixelSpec?.fb_pixel || [];
+  };
+  
+
   return (
     <div>
       <div className="relative flex">
         <div className="flex-grow overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border">
-                <TableHead className="w-5 select-none">
+              <TableRow className="bg-gray-50">
+                <TableHead className="w-5 select-none border-r">
                   <input type="checkbox" />
                 </TableHead>
-                <TableHead className="w-20 select-none">
+                <TableHead className="w-20 select-none border-r">
                   <div className="flex items-center">Off/On</div>
                 </TableHead>
-                <TableHead className="text-lg font-medium min-w-[200px] select-none">
+                <TableHead className="text-lg font-medium min-w-[200px] select-none border-r">
                   <div className="resize-x overflow-hidden">Ads</div>
                 </TableHead>
                 {customColumn.map((col, idx) => (
-                  <React.Fragment key={idx}>
-                    <Separator orientation="vertical" className="h-10" />
-                    <TableHead className="font-bold text-xs select-none">
-                      <div className="resize-x overflow-hidden min-w-[120px]">
-                        {col}
-                      </div>
-                    </TableHead>
-                  </React.Fragment>
+                  <TableHead
+                    key={idx}
+                    className={`font-bold text-xs select-none ${
+                      idx !== customColumn.length - 1 ? "border-r" : ""
+                    }`}
+                  >
+                    <div className="resize-x overflow-hidden min-w-[120px]">
+                      {col}
+                    </div>
+                  </TableHead>
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {adsData.map((ads, idx) => (
-                <TableRow 
+                <TableRow
                   key={idx}
                   className="group hover:bg-gray-50 transition-colors"
                 >
-                  <TableCell className="w-5">
+                  <TableCell className="w-5 border-r">
                     <input type="checkbox" />
                   </TableCell>
-                  <TableCell className="w-20">
-                    <Switch checked={ads.status === "ACTIVE"} />
+                  <TableCell className="w-20 border-r">
+                    <Switch
+                      checked={ads.status === "ACTIVE"}
+                      onCheckedChange={(checked) =>
+                        handleStatusChange(
+                          ads.adId,
+                          checked ? "ACTIVE" : "PAUSED"
+                        )
+                      }
+                    />
                   </TableCell>
-                  <TableCell className="min-w-[200px]">
+                  <TableCell className="min-w-[200px] border-r">
                     <div className="flex items-center space-x-3">
                       <div
                         className="relative cursor-pointer"
                         onMouseEnter={() => setPreviewImage(ads)}
                       >
                         <img
-                          src={ads.imageUrl}
+                          src={ads.creative && ads.creative.thumbnailUrl}
                           alt={ads.adName}
                           className="h-8 w-8 object-cover rounded hover:ring-2 hover:ring-blue-500"
                         />
@@ -87,26 +141,81 @@ const Ads = ({previewImage, customColumn, adsData, setPreviewImage, getAdLink}) 
                           return ads.adSetId;
                         case "Campaign ID":
                           return ads.campaignId;
+                        case "Budget":
+                          return ads.dailyBudget || 0;
+                        case "URL parameters":
+                          return ads.creative?.urlTags;
+                        case "Objective":
+                          return ads.objective?.substring(8).toLowerCase()
+                          case "Meta Pixel":
+                            { const pixels = getFbPixel(ads.trackingSpecs);
+                            return (
+                              <div className="flex flex-wrap gap-1">
+                                {pixels.length > 0 ? (
+                                  pixels.map((pixel, index) => (
+                                    <span 
+                                      key={index}
+                                     
+                                    >
+                                      (ID:{pixel})
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-gray-400">—</span>
+                                )}
+                              </div>
+                            ); }
+                        case "Preview link":
+                          return ads.preview_shareable_link;
+                        case "Link (ad settings)":
+                          // Safely access objectStorySpec using optional chaining
+                          return (
+                            ads.creative?.objectStorySpec?.link_data?.link ||
+                            "—"
+                          );
                         case "Campaign name":
-                          return ads.campaignName || "---";
+                          return ads.campaignName || "—";
+                        case "Delivery":
+                          return (
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`w-2 h-2 rounded-full ${
+                                  ads.campaignStatus === "PAUSED"
+                                    ? "bg-gray-400"
+                                    : ads.status === "ACTIVE"
+                                    ? "bg-green-500"
+                                    : "bg-gray-400"
+                                }`}
+                              ></div>
+                              <span>
+                                {ads.campaignStatus === "PAUSED"
+                                  ? "Campaign off"
+                                  : ads.status === "ACTIVE"
+                                  ? "Active"
+                                  : "Paused"}
+                              </span>
+                            </div>
+                          );
                         default: {
                           const normalizedKey = col
                             .toLowerCase()
                             .replace(/\s+/g, "");
-                          return ads[normalizedKey];
+                          return ads[normalizedKey] || "—";
                         }
                       }
                     })();
 
                     return (
-                      <React.Fragment key={idx}>
-                        <Separator orientation="vertical" className="h-10" />
-                        <TableCell className="font-sans text-xs min-w-[120px]">
-                          <div className="truncate">
-                            {value !== undefined ? value : "---"}
-                          </div>
-                        </TableCell>
-                      </React.Fragment>
+                      <TableCell
+                        key={idx}
+                        className={`font-sans text-xs max-w-[120px] ${
+                          idx !== customColumn.length - 1 ? "border-r" : ""
+                        }`}
+                      >
+                        <div className="truncate">
+                          {value !== undefined ? value : "—"}
+                        </div>
+                      </TableCell>
                     );
                   })}
                 </TableRow>
@@ -121,7 +230,9 @@ const Ads = ({previewImage, customColumn, adsData, setPreviewImage, getAdLink}) 
           >
             <div className="space-y-4">
               <img
-                src={previewImage.imageUrl}
+                src={
+                  previewImage.creative && previewImage.creative.thumbnailUrl
+                }
                 alt={previewImage.adName}
                 className="w-full h-[200px] object-contain bg-gray-50 rounded"
               />
@@ -132,12 +243,12 @@ const Ads = ({previewImage, customColumn, adsData, setPreviewImage, getAdLink}) 
                     <div className="flex items-center gap-2 text-blue-600">
                       <Link size={14} />
                       <a
-                        href={getAdLink(previewImage)}
+                        href={previewImage.preview_shareable_link}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs break-all hover:underline"
                       >
-                        {getAdLink(previewImage)}
+                        {previewImage.preview_shareable_link}
                       </a>
                     </div>
                   </div>

@@ -56,19 +56,25 @@ const Campaign = ({ fetchedData }) => {
       setCampaignData(fetchedData);
       return;
     }
-
+  
+    // Get only campaign name filters
+    const campaignFilters = activeFilters.filter(rule => rule.field === 'campaign_name');
+  
+    // If no campaign filters, return original data
+    if (campaignFilters.length === 0) {
+      setCampaignData(fetchedData);
+      return;
+    }
+  
     const filteredCampaign = fetchedData.filter((campaign) => {
-      return activeFilters.some((rule) => {
-        if (rule.field !== 'campaign_name') {
-          return true;
-        }
-
+      return campaignFilters.every((rule) => {
         const campaignName = (campaign.campaignName || '').trim().toLowerCase();
         const searchValue = (rule.value || "").trim().toLowerCase();
-
+  
         if (!searchValue) {
           return true;
         }
+  
         switch (rule.condition) {
           case "Contains":
             return campaignName.includes(searchValue);
@@ -79,10 +85,11 @@ const Campaign = ({ fetchedData }) => {
         }
       });
     });
-
+  
     setCampaignData(filteredCampaign);
     setSelectedItems(new Set());
   }, [activeFilters, fetchedData]);
+  
 
   const handleSwitchToggle = async (campaignId, newStatus) => {
     try {

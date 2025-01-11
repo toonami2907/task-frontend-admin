@@ -81,19 +81,25 @@ const Ads = ({
       setAdsData(initialAdsData);
       return;
     }
-
-    const filtered = initialAdsData.filter((ad) => {
-      return activeFilters.some((rule) => {
-        if (rule.field !== 'ad_name') {
-          return true;
-        }
-        const adName = (ad.adName || "").trim().toLowerCase();
-        const searchValue = (rule.value || "").trim().toLowerCase();
-        
+  
+    // Get only ad name filters
+    const adFilters = activeFilters.filter(rule => rule.field === 'ad_name');
+  
+    // If no ad filters, return original data
+    if (adFilters.length === 0) {
+      setAdsData(initialAdsData);
+      return;
+    }
+  
+    const filteredAds = initialAdsData.filter((ad) => {
+      return adFilters.every((rule) => {
+        const adName = (ad.adName || '').trim().toLowerCase();
+        const searchValue = (rule.value || '').trim().toLowerCase();
+  
         if (!searchValue) {
           return true;
         }
-
+  
         switch (rule.condition) {
           case "Contains":
             return adName.includes(searchValue);
@@ -104,9 +110,10 @@ const Ads = ({
         }
       });
     });
-
-    setAdsData(filtered);
+  
+    setAdsData(filteredAds);
   }, [activeFilters, initialAdsData]);
+  
 
   const getFbPixel = (trackingSpecs) => {
     if (!trackingSpecs || !Array.isArray(trackingSpecs)) {

@@ -15,13 +15,13 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import StyledDropdown from "./StyledDropdown";
 import DeliveryBar from "./DeliveryBar";
-import {  Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import NoAds from "@/components/NoAds"; // Assuming NoAds is located here
 import Campaign from "./Campaign";
 import Ads from "./Ads";
 import AdsCalendarDialog from "./AdsCalendarDialog";
 import SearchBar2 from "./SearchBar2";
-import NoAdsset from './NoAdsset'
+import NoAdsset from "./NoAdsset";
 
 const AdsManager = ({ selectedBar, setSelectedBar }) => {
   const [campaignNames, setCampaignNames] = useState({});
@@ -29,11 +29,8 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
   const [selectedAds, setSelectedAds] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { state, customColumn, activeFilters} = useGlobalContext();
+  const { state, customColumn, activeFilters } = useGlobalContext();
   const [originalData, setOriginalData] = useState([]);
-
-
-
 
   const LoadingSpinner = () => (
     <div className="flex items-center justify-center w-full py-8">
@@ -139,7 +136,6 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
     }
   }, [fetchedData]);
 
-
   const FetchAdsById = async (adId) => {
     try {
       const response = await axios.get(`${API_URL}/auth/ads/${adId}`, {
@@ -163,49 +159,31 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
 
         const newAdsData = await Promise.all(
           selectedBar.map(async (adSetId) => {
-            try {
-              const response = await fetchAdsSetById(adSetId);
-              if (!response?.ads?.length) return [];
+            const response = await fetchAdsSetById(adSetId);
 
-              const ads = await Promise.all(
-                response.ads.map(async (ad) => {
-                  const adId = typeof ad === "object" ? ad.adId : ad;
-                  return await FetchAdsById(adId);
-                })
-              );
-
-              return ads.filter(Boolean);
-            } catch (error) {
-              console.error(
-                `Error fetching data for adSetId ${adSetId}:`,
-                error
-              );
+            // Return early if no ads found
+            if (!response?.ads?.length) {
               return [];
             }
+
+            const ads = await Promise.all(
+              response.ads.map(async (ad) => {
+                const adId = typeof ad === "object" ? ad.adId : ad;
+                const adData = await FetchAdsById(adId);
+                // Parse the JSON if it's a string
+                return typeof adData === "string" ? JSON.parse(adData) : adData;
+              })
+            );
+
+            return ads.filter(Boolean);
           })
         );
 
-        setSelectedAds((prevAds) => {
-          const validPrevAds = prevAds.filter(
-            (ad) => ad?.adId && selectedBar.includes(ad.adSetId)
-          );
-
-          const validNewAds = newAdsData
-            .flat()
-            .filter(
-              (ad) =>
-                ad?.adId &&
-                !validPrevAds.some((prevAd) => prevAd.adId === ad.adId)
-            );
-
-          return [...validPrevAds, ...validNewAds];
-        });
+        // Directly set the flattened and filtered new data
+        setSelectedAds(newAdsData.flat());
       } catch (error) {
         console.error("Error in FetchArrayData:", error);
-        toast.error("Error fetching ads data", {
-          position: "top-right",
-          duration: 5000,
-        });
+        toast.error("Error fetching ads data");
       } finally {
         setIsLoading(false);
       }
@@ -216,52 +194,69 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
 
   const hasData = (data) => Array.isArray(data) && data.length > 0;
 
-  const adsData = selectedAds.length > 0 ? selectedAds : originalData;
+  const adsData = (() => {
+    // When selectedBar exists, strictly use selectedAds (even if empty)
+    if (selectedBar?.length > 0) {
+      return selectedAds;
+    }
+
+    // When no selections, use original data
+    return originalData;
+  })();
 
   useEffect(() => {
     if (!activeFilters || activeFilters.length === 0) {
       setFetchData(originalData);
       return;
     }
-  
+
+    // Get only adset name filters
+    const adsetFilters = activeFilters.filter(
+      (rule) => rule.field === "adset_name"
+    );
+
+    // If no adset filters, return original data
+    if (adsetFilters.length === 0) {
+      setFetchData(originalData);
+      return;
+    }
+
     const filtered = originalData.filter((adsset) => {
-      return activeFilters.some((rule) => {
-        if (rule.field !== 'adset_name') {
-          return true;
-        }
-  
-        // Trim whitespace and convert to lowercase for consistent comparison
-        const adsetName = (adsset.adSetName || '').trim().toLowerCase();
-        const searchValue = (rule.value || '').trim().toLowerCase();
-        
-        // Skip empty search values
+      return adsetFilters.every((rule) => {
+        const adsetName = (adsset.adSetName || "").trim().toLowerCase();
+        const searchValue = (rule.value || "").trim().toLowerCase();
+
         if (!searchValue) {
           return true;
         }
-  
+
         switch (rule.condition) {
           case "Contains":
             return adsetName.includes(searchValue);
           case "Doesn`t contain":
             return !adsetName.includes(searchValue);
+          case "Starts with":
+            return adsetName.startsWith(searchValue);
+          case "Ends with":
+            return adsetName.endsWith(searchValue);
+          case "Equals":
+            return adsetName === searchValue;
+          case "Not equals":
+            return adsetName !== searchValue;
           default:
             return true;
         }
       });
     });
-  
+
     setFetchData(filtered);
   }, [activeFilters, originalData]);
-  
-
-
-
 
   return (
     <div className="w-full py-4 bg-inherit px-0 font-sans">
       {/* Top Navigation */}
       <div className="flex-col  items-center justify-between  px-5 pb-2">
-        <SearchBar2  />
+        <SearchBar2 />
         <div className="flex items-center justify-end space-x-4">
           <AdsCalendarDialog />
           <StyledDropdown />
@@ -272,133 +267,142 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
       {/* Table View with Loading State */}
       {isLoading ? (
         <LoadingSpinner />
-      ) : hasData(adsData) ? (
+      ) : hasData(originalData) ? (
         <Table>
           {/* Render table based on `state` */}
           {state === "Campaign" && <Campaign fetchedData={originalData} />}
           {state === "Ads Set" && (
             <>
-            {!fetchedData || fetchedData.length === 0 ? <NoAdsset /> : <>
-              <TableHeader>
-                <TableRow className="bg-gray-50 h-10">
-                  <TableHead className="w-12 p-2 select-none border-r">
-                    <Checkbox
-                      checked={
-                        fetchedData.length > 0 &&
-                        selectedBar?.length === fetchedData.length
-                      }
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedBar(
-                            fetchedData.map((adsset) => adsset.adSetId)
-                          );
-                        } else {
-                          setSelectedBar([]);
-                        }
-                      }}
-                    />
-                  </TableHead>
-                  <TableHead className="w-20 p-2 select-none border-r">
-                    <div className="flex items-center resize-x overflow-hidden">
-                      Off/On
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-lg font-medium p-2 min-w-[200px] select-none border-r">
-                    <div className="resize-x overflow-hidden">{state}</div>
-                  </TableHead>
-                  <TableHead className="font-bold min-w-[120px] select-none border-r">
-                    <div className="resize-x overflow-hidden">Delivery</div>
-                  </TableHead>
-                  <TableHead className="font-bold min-w-[150px] select-none border-r">
-                    <div className="resize-x overflow-hidden flex justify-center">
-                      Budget
-                    </div>
-                  </TableHead>
-                  <TableHead className="font-bold min-w-[120px] select-none border-r">
-                    <div className="resize-x overflow-hidden">Impression</div>
-                  </TableHead>
-                  <TableHead className="font-bold min-w-[120px] select-none">
-                    <div className="resize-x overflow-hidden">Reach</div>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {fetchedData.map((adsset, idx) => (
-                  <TableRow
-                    key={idx}
-                    className="h-5 hover:bg-gray-50 transition-colors"
-                  >
-                    <TableCell className="p-2 w-12 border-r">
-                      <Checkbox
-                        checked={selectedBar?.includes(adsset.adSetId) || false}
-                        onCheckedChange={() => {
-                          setSelectedBar((prev) => {
-                            const exists = prev?.some(
-                              (item) => item === adsset.adSetId
-                            );
-                            if (exists) {
-                              return prev.filter(
-                                (item) => item !== adsset.adSetId
+              {!fetchedData || fetchedData.length === 0 ? (
+                <NoAdsset />
+              ) : (
+                <>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50 h-10">
+                      <TableHead className="w-12 p-2 select-none border-r">
+                        <Checkbox
+                          checked={
+                            fetchedData.length > 0 &&
+                            selectedBar?.length === fetchedData.length
+                          }
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedBar(
+                                fetchedData.map((adsset) => adsset.adSetId)
                               );
+                            } else {
+                              setSelectedBar([]);
                             }
-                            return [...(prev || []), adsset.adSetId];
-                          });
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell className="p-2 w-20 border-r">
-                      <Switch checked={true} />
-                    </TableCell>
-                    <TableCell className="font-semibold hover:text-blue-700 cursor-pointer p-2 min-w-[200px] border-r">
-                      <div className="space-y-1">
-                        <p className="truncate">{adsset.adSetName}</p>
-                        {adsset.ads && (
-                          <p className="text-xs text-blue-900">
-                            {adsset.ads.length} ads
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-sans p-2 min-w-[120px] border-r">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            adsset.campaignStatus === "PAUSED"
-                              ? "bg-gray-400"
-                              : adsset.status === "ACTIVE"
-                              ? "bg-green-500"
-                              : "bg-gray-400"
-                          }`}
-                        ></div>
-                        <span>
-                          {adsset.campaignStatus === "PAUSED"
-                            ? "Campaign off"
-                            : adsset.status === "ACTIVE"
-                            ? "Active"
-                            : "Paused"}
-                        </span>
-                      </div>
-                    </TableCell>
+                          }}
+                        />
+                      </TableHead>
+                      <TableHead className="w-20 p-2 select-none border-r">
+                        <div className="flex items-center resize-x overflow-hidden">
+                          Off/On
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-lg font-medium p-2 min-w-[200px] select-none border-r">
+                        <div className="resize-x overflow-hidden">{state}</div>
+                      </TableHead>
+                      <TableHead className="font-bold min-w-[120px] select-none border-r">
+                        <div className="resize-x overflow-hidden">Delivery</div>
+                      </TableHead>
+                      <TableHead className="font-bold min-w-[150px] select-none border-r">
+                        <div className="resize-x overflow-hidden flex justify-center">
+                          Budget
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-bold min-w-[120px] select-none border-r">
+                        <div className="resize-x overflow-hidden">
+                          Impression
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-bold min-w-[120px] select-none">
+                        <div className="resize-x overflow-hidden">Reach</div>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {fetchedData.map((adsset, idx) => (
+                      <TableRow
+                        key={idx}
+                        className="h-5 hover:bg-gray-50 transition-colors"
+                      >
+                        <TableCell className="p-2 w-12 border-r">
+                          <Checkbox
+                            checked={
+                              selectedBar?.includes(adsset.adSetId) || false
+                            }
+                            onCheckedChange={() => {
+                              setSelectedBar((prev) => {
+                                const exists = prev?.some(
+                                  (item) => item === adsset.adSetId
+                                );
+                                if (exists) {
+                                  return prev.filter(
+                                    (item) => item !== adsset.adSetId
+                                  );
+                                }
+                                return [...(prev || []), adsset.adSetId];
+                              });
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="p-2 w-20 border-r">
+                          <Switch checked={true} />
+                        </TableCell>
+                        <TableCell className="font-semibold hover:text-blue-700 cursor-pointer p-2 min-w-[200px] border-r">
+                          <div className="space-y-1">
+                            <p className="truncate">{adsset.adSetName}</p>
+                            {adsset.ads && (
+                              <p className="text-xs text-blue-900">
+                                {adsset.ads.length} ads
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-sans p-2 min-w-[120px] border-r">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`w-2 h-2 rounded-full ${
+                                adsset.campaignStatus === "PAUSED"
+                                  ? "bg-gray-400"
+                                  : adsset.status === "ACTIVE"
+                                  ? "bg-green-500"
+                                  : "bg-gray-400"
+                              }`}
+                            ></div>
+                            <span>
+                              {adsset.campaignStatus === "PAUSED"
+                                ? "Campaign off"
+                                : adsset.status === "ACTIVE"
+                                ? "Active"
+                                : "Paused"}
+                            </span>
+                          </div>
+                        </TableCell>
 
-                    <TableCell className="font-sans text-xs p-2 min-w-[150px] border-r">
-                      <div className="flex flex-col items-center">
-                        <h1 className="flex flex-col items-end">
-                          <span>NGN {adsset.dailyBudget}</span>
-                          <span>daily</span>
-                        </h1>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-sans p-2 min-w-[120px] border-r">
-                      <div className="truncate">{adsset.impression || 0}</div>
-                    </TableCell>
-                    <TableCell className="font-sans p-2 min-w-[120px]">
-                      <div className="truncate">{adsset.reach || "—"}</div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-
-            </> }
+                        <TableCell className="font-sans text-xs p-2 min-w-[150px] border-r">
+                          <div className="flex flex-col items-center">
+                            <h1 className="flex flex-col items-end">
+                              <span>NGN {adsset.dailyBudget}</span>
+                              <span>daily</span>
+                            </h1>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-sans p-2 min-w-[120px] border-r">
+                          <div className="truncate">
+                            {adsset.impression || 0}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-sans p-2 min-w-[120px]">
+                          <div className="truncate">{adsset.reach || "—"}</div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </>
+              )}
             </>
           )}
           {state === "Ads" && (

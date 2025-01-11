@@ -51,7 +51,6 @@ useEffect(()=>{
    setCustomColumn(presets)
   }, [selectedPresets]);
   useEffect(()=>{
-    console.log('refreshed here ')
 
   }, [activeFilters])
 
@@ -66,7 +65,7 @@ useEffect(()=>{
     fetchAds()
   },[])
   useEffect(() => {
-    console.log('selectedbar from provider', selectedBar)
+    // console.log('selectedbar from provider', selectedBar)
 
   }, [selectedBar, setSelectedBar])
   return (

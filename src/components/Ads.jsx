@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import React, { useState, useEffect} from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import {
   Table,
@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "./ui/switch";
 import { Checkbox } from "./ui/checkbox";
-import { Link } from "lucide-react";
-import NoAd from './NoAd'
-import { API_URL, useGlobalContext} from "@/functions/features/StateProvider";
+import { Link, Pen } from "lucide-react";
+import NoAd from "./NoAd";
+import { API_URL, useGlobalContext } from "@/functions/features/StateProvider";
 
 const Ads = ({
   previewImage,
@@ -26,6 +26,8 @@ const Ads = ({
   const { activeFilters } = useGlobalContext();
   const [selectedAds, setSelectedAds] = useState({});
   const [selectAll, setSelectAll] = useState(false);
+  const [editingAdId, setEditingAdId] = useState(null);
+  const [editingName, setEditingName] = useState("");
 
   const handleSelectAll = (checked) => {
     setSelectAll(checked);
@@ -41,7 +43,7 @@ const Ads = ({
       ...prev,
       [adId]: checked,
     }));
-    
+
     // Update selectAll state based on whether all ads are selected
     const updatedSelected = {
       ...selectedAds,
@@ -66,6 +68,23 @@ const Ads = ({
       console.error(`Failed to update Ad ${adId} status:`, error.message);
     }
   };
+  const handleNameUpdate = async (adId, newName) => {
+    try {
+      await axios.post(`${API_URL}/auth/update/ads`, {
+        adId,
+        newName,
+      });
+
+      setAdsData((prevAds) =>
+        prevAds.map((ad) =>
+          ad.adId === adId ? { ...ad, adName: newName } : ad
+        )
+      );
+      setEditingAdId(null);
+    } catch (error) {
+      console.error("Failed to update ad name:", error);
+    }
+  };
 
   // Update local state when prop changes
   useEffect(() => {
@@ -74,6 +93,10 @@ const Ads = ({
     setSelectedAds({});
     setSelectAll(false);
   }, [initialAdsData]);
+  const handleCancel = () => {
+    setEditingAdId(null);
+    setEditingName("");
+  };
 
   // Filter ads based on active filters
   useEffect(() => {
@@ -81,25 +104,25 @@ const Ads = ({
       setAdsData(initialAdsData);
       return;
     }
-  
+
     // Get only ad name filters
-    const adFilters = activeFilters.filter(rule => rule.field === 'ad_name');
-  
+    const adFilters = activeFilters.filter((rule) => rule.field === "ad_name");
+
     // If no ad filters, return original data
     if (adFilters.length === 0) {
       setAdsData(initialAdsData);
       return;
     }
-  
+
     const filteredAds = initialAdsData.filter((ad) => {
       return adFilters.every((rule) => {
-        const adName = (ad.adName || '').trim().toLowerCase();
-        const searchValue = (rule.value || '').trim().toLowerCase();
-  
+        const adName = (ad.adName || "").trim().toLowerCase();
+        const searchValue = (rule.value || "").trim().toLowerCase();
+
         if (!searchValue) {
           return true;
         }
-  
+
         switch (rule.condition) {
           case "Contains":
             return adName.includes(searchValue);
@@ -110,10 +133,9 @@ const Ads = ({
         }
       });
     });
-  
+
     setAdsData(filteredAds);
   }, [activeFilters, initialAdsData]);
-  
 
   const getFbPixel = (trackingSpecs) => {
     if (!trackingSpecs || !Array.isArray(trackingSpecs)) {
@@ -122,7 +144,7 @@ const Ads = ({
     const pixelSpec = trackingSpecs.find((spec) => spec["fb_pixel"]);
     return pixelSpec?.fb_pixel || [];
   };
-  
+
   if (!adsData || adsData.length === 0) {
     return <NoAd />;
   }
@@ -135,7 +157,7 @@ const Ads = ({
             <TableHeader>
               <TableRow className="bg-gray-50">
                 <TableHead className="w-5 select-none ">
-                  <Checkbox 
+                  <Checkbox
                     checked={selectAll}
                     onCheckedChange={handleSelectAll}
                   />
@@ -169,7 +191,9 @@ const Ads = ({
                   <TableCell className="w-5 ">
                     <Checkbox
                       checked={selectedAds[ads.adId] || false}
-                      onCheckedChange={(checked) => handleSelectSingle(ads.adId, checked)}
+                      onCheckedChange={(checked) =>
+                        handleSelectSingle(ads.adId, checked)
+                      }
                     />
                   </TableCell>
                   <TableCell className="w-20 border-r">
@@ -196,10 +220,46 @@ const Ads = ({
                         />
                       </div>
                       <span
-                        className="text-sm  min-w-[150px]"
-                        title={ads.adName}
+                        className="text-sm min-w-[170px] group relative"
+                        title={`Edit ${ads.adName}`}
                       >
-                        {ads.adName}
+                        {editingAdId === ads.adId ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  handleNameUpdate(ads.adId, editingName);
+                                }
+                                if (e.key === "Escape") {
+                                  handleCancel();
+                                }
+                              }}
+                              className="border rounded px-2 py-1 flex-1"
+                              autoFocus
+                            />
+                            <button
+                              onClick={handleCancel}
+                              className="text-gray-500 hover:text-red-500"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            {ads.adName}
+                            <Pen
+                              size={14}
+                              className="opacity-0 group-hover:opacity-100 cursor-pointer text-blue-500"
+                              onClick={() => {
+                                setEditingAdId(ads.adId);
+                                setEditingName(ads.adName);
+                              }}
+                            />
+                          </div>
+                        )}
                       </span>
                     </div>
                   </TableCell>
@@ -219,28 +279,25 @@ const Ads = ({
                         case "Campaign ID":
                           return ads.campaignId;
                         case "Budget":
-                          return ads.dailyBudget /100 || 0;
+                          return ads.dailyBudget / 100 || 0;
                         case "URL parameters":
                           return ads.creative?.urlTags;
                         case "Objective":
-                          return ads.objective?.substring(8).toLowerCase()
-                          case "Meta Pixel":
-                            { const pixels = getFbPixel(ads.trackingSpecs);
-                            return (
-                              <div className="flex flex-wrap gap-1">
-                                {pixels.length > 0 ? (
-                                  pixels.map((pixel, index) => (
-                                    <span 
-                                      key={index}
-                                    >
-                                      (ID:{pixel})
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="text-gray-400">—</span>
-                                )}
-                              </div>
-                            ); }
+                          return ads.objective?.substring(8).toLowerCase();
+                        case "Meta Pixel": {
+                          const pixels = getFbPixel(ads.trackingSpecs);
+                          return (
+                            <div className="flex flex-wrap gap-1">
+                              {pixels.length > 0 ? (
+                                pixels.map((pixel, index) => (
+                                  <span key={index}>(ID:{pixel})</span>
+                                ))
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </div>
+                          );
+                        }
                         case "Preview link":
                           return ads.preview_shareable_link;
                         case "Link (ad settings)":

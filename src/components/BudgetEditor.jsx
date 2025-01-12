@@ -1,29 +1,86 @@
-import React, { useState } from 'react';
+/* eslint-disable react/prop-types */
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { X, Loader } from 'lucide-react';
 import axios from 'axios';
-import { API_URL } from '@/functions/features/StateProvider';
+import { API_URL, useGlobalContext } from '@/functions/features/StateProvider';
+import {ErrorToast} from '@/hooks/customToast'
+import toast from 'react-hot-toast';
 
 const BudgetEditor = ({ initialBudget, campaignId, onClose, onSuccess }) => {
-  const [budget, setBudget] = useState(initialBudget);
+  const [budget, setBudget] = useState('');
+  const {fetchAds} = useGlobalContext()
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    // Convert initial budget to string with 2 decimal places
+    if (initialBudget) {
+      setBudget(Number(initialBudget).toFixed(2));
+    }
+  }, [initialBudget]);
+
+  const validateBudget = (value) => {
+    const numValue = Number(value);
+    if (isNaN(numValue)) {
+      return 'Please enter a valid number';
+    }
+    if (numValue <= 0) {
+      return 'Budget must be greater than 0';
+    }
+    if (numValue > 1000000) { // Adjust this limit as needed
+      return 'Budget exceeds maximum limit';
+    }
+    return '';
+  };
+
+  const handleBudgetChange = (e) => {
+    const value = e.target.value;
+    setBudget(value);
+    setError(validateBudget(value));
+  };
 
   const handleSubmit = async () => {
+    // Validate inputs
+    if (!campaignId) {
+      toast.error('Campaign ID is missing');
+      return;
+    }
+
+    const validationError = validateBudget(budget);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setIsSubmitting(true);
+    const toastId = toast.loading('Updating budget...');
+
     try {
       const response = await axios.post(`${API_URL}/auth/update/camapaign/budget`, {
         campaignId,
-        budget: parseFloat(budget)
+        newDailyBudget: Number(budget)
       });
 
-      if (response.status === 200) {
-        onSuccess(budget);
+      if (response.data.success) {
+        toast.success('Budget updated successfully', { id: toastId });
+        onSuccess(Number(budget));
         onClose();
+        fetchAds()
+      } else {
+        throw new Error(response.data.message || 'Failed to update budget');
       }
     } catch (error) {
-      console.error('Failed to update budget:', error);
+      toast.dismiss()
+      const errorMessage = 'Budget updates for Advantage+ Shopping Campaigns must be made at the ad set level. Please navigate to your ad set settings to modify the budget.';
+      if(error.response.data.message === "(#100) Invalid campaign param(daily_budget) to create an ASC ad."){
+        // setError(errorMessage);
+        
+        ErrorToast(errorMessage)
+        return
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -37,6 +94,7 @@ const BudgetEditor = ({ initialBudget, campaignId, onClose, onSuccess }) => {
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
+            disabled={isSubmitting}
           >
             <X size={16} />
           </button>
@@ -48,11 +106,12 @@ const BudgetEditor = ({ initialBudget, campaignId, onClose, onSuccess }) => {
             <Input
               type="number"
               value={budget}
-              onChange={(e) => setBudget(e.target.value)}
-              className="pl-7"
+              onChange={handleBudgetChange}
+              className={`pl-7 ${error ? 'border-red-500' : ''}`}
               placeholder="Enter daily budget"
               min="0"
               step="0.01"
+              disabled={isSubmitting}
             />
           </div>
           
@@ -61,15 +120,23 @@ const BudgetEditor = ({ initialBudget, campaignId, onClose, onSuccess }) => {
               variant="outline"
               className="w-1/2"
               onClick={onClose}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               className="w-1/2"
               onClick={handleSubmit}
-              disabled={isSubmitting || !budget}
+              disabled={isSubmitting || !budget || !!error}
             >
-              {isSubmitting ? 'Saving...' : 'Save'}
+              {isSubmitting ? (
+                <div className="flex items-center gap-2">
+                  <Loader className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </div>
+              ) : (
+                'Save'
+              )}
             </Button>
           </div>
         </div>

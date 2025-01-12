@@ -14,6 +14,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Link, Pen } from "lucide-react";
 import NoAd from "./NoAd";
 import { API_URL, useGlobalContext } from "@/functions/features/StateProvider";
+import { formatCurrency } from "@/hooks/func";
 
 const Ads = ({
   previewImage,
@@ -23,7 +24,7 @@ const Ads = ({
   getAdLink,
 }) => {
   const [adsData, setAdsData] = useState(initialAdsData);
-  const { activeFilters } = useGlobalContext();
+  const { activeFilters, fetchAds } = useGlobalContext();
   const [selectedAds, setSelectedAds] = useState({});
   const [selectAll, setSelectAll] = useState(false);
   const [editingAdId, setEditingAdId] = useState(null);
@@ -80,6 +81,7 @@ const Ads = ({
           ad.adId === adId ? { ...ad, adName: newName } : ad
         )
       );
+      fetchAds()
       setEditingAdId(null);
     } catch (error) {
       console.error("Failed to update ad name:", error);
@@ -279,9 +281,11 @@ const Ads = ({
                         case "Campaign ID":
                           return ads.campaignId;
                         case "Budget":
-                          return ads.dailyBudget / 100 || 0;
+                          return ads.dailyBudget ? formatCurrency(ads.dailyBudget) : "—"
                         case "URL parameters":
                           return ads.creative?.urlTags;
+                        case "Audience location (Ad set settings)":
+                          return 'NG';
                         case "Objective":
                           return ads.objective?.substring(8).toLowerCase();
                         case "Meta Pixel": {

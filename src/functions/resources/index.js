@@ -104,37 +104,8 @@ export const deliveryMetrics = [
   ];
   
 
-  // const options = {
-  //   "Recently used": [
-  //     {
-  //       name: "Delivery",
-  //       description: "View delivery-related metrics and statistics",
-  //     },
-  //     {
-  //       name: "Performance and clicks",
-  //       description: "Track engagement and click-through rates",
-  //     },
-  //     {
-  //       name: "Performance",
-  //       description: "Monitor overall performance metrics",
-  //     },
-  //   ],
-  //   Popular: [
-  //     { name: "Engagement", description: "Analyze user engagement metrics" },
-  //     {
-  //       name: "Setup",
-  //       description:
-  //         "Here are the metrics and details included in this column preset:",
-  //     },
-  //     {
-  //       name: "Engagement",
-  //       description: "Track video-specific engagement metrics",
-  //     },
-  //   ],
-  //   Custom: [
-  //     {
-  //       name: "Custom",
-  //       description: "Create and configure custom column layouts",
-  //     },
-  //   ],
-  // };
+  export const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+  };

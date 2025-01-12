@@ -53,23 +53,22 @@ useEffect(()=>{
   useEffect(()=>{
 
   }, [activeFilters])
+  const fetchAds = async()=>{
+    try {
+     await axios.get(`${API_URL}/auth/ads`)
+    } catch (error) {
+      console.error('error fetching ads', error.message)
+    }
+  }
 
   useEffect(()=>{
-    const fetchAds = async()=>{
-      try {
-       await axios.get(`${API_URL}/auth/ads`)
-      } catch (error) {
-        console.error('error fetching ads', error.message)
-      }
-    }
     fetchAds()
   },[])
   useEffect(() => {
-    // console.log('selectedbar from provider', selectedBar)
 
   }, [selectedBar, setSelectedBar])
   return (
-    <StateContext.Provider value={{ state, setState, setCustomColumn, customColumn, selectedPresets,setActiveFilters,activeFilters,  setSelectedPresets, setSelectedBar,selectedBarData,setSelectedBarData, selectedBar}}>
+    <StateContext.Provider value={{ state, setState, setCustomColumn, customColumn, selectedPresets,fetchAds,setActiveFilters,activeFilters,  setSelectedPresets, setSelectedBar,selectedBarData,setSelectedBarData, selectedBar}}>
       {children}
     </StateContext.Provider>
   );

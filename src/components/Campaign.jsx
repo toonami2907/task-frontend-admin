@@ -1,5 +1,4 @@
-/* eslint-disable react/prop-types */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import {
   Table,
@@ -15,60 +14,70 @@ import { Switch } from "@/components/ui/switch";
 import { API_URL, useGlobalContext } from "@/functions/features/StateProvider";
 import NoCampaign from "./NoCampaign";
 import toast from "react-hot-toast";
-import { Pen } from "lucide-react";
+import { Pen, Loader } from "lucide-react";
 import BudgetEditor from "./BudgetEditor";
 import { formatCurrency } from "@/hooks/func";
 
-// New NoCampaign component
+const STATUS_COLORS = {
+  ACTIVE: "bg-green-500",
+  PAUSED: "bg-gray-400",
+};
 
 const Campaign = ({ fetchedData, customColumn }) => {
   const [campaignData, setCampaignData] = useState(fetchedData);
-  const { activeFilters } = useGlobalContext();
+  const { activeFilters, fetchAds } = useGlobalContext();
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [editingCampaignId, setEditingCampaignId] = useState(null);
   const [editingName, setEditingName] = useState("");
   const [editingBudgetId, setEditingBudgetId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(null);
 
-  // Add this function to handle name updates
   const handleNameUpdate = async (campaignId, newName) => {
+    if (!newName.trim()) {
+      toast.error("Campaign name cannot be empty");
+      return;
+    }
+
+    setIsLoading(true);
     try {
       const response = await axios.post(`${API_URL}/auth/update/campaign`, {
         campaignId,
-        newName,
+        newName: newName.trim(),
       });
 
-      if (response.status === 200) {
+      if (response.data.success) {
+        fetchAds()
         setCampaignData((prevData) =>
           prevData.map((campaign) =>
             campaign.campaignId === campaignId
-              ? { ...campaign, campaignName: newName }
+              ? { ...campaign, campaignName: newName.trim() }
               : campaign
           )
         );
-        toast.success("Campaign name updated successfully", {
-          position: "bottom-right",
-          duration: 3000,
-        });
+        toast.success("Campaign name updated successfully");
+
+      } else {
+        throw new Error(response.data.message || "Failed to update campaign name");
       }
-      setEditingCampaignId(null);
     } catch (error) {
-      toast.error("Failed to update campaign name", {
-        position: "bottom-right",
-        duration: 3000,
-      });
+      toast.error(error.response?.data?.message || "Failed to update campaign name");
+    } finally {
+      setIsLoading(false);
+      setEditingCampaignId(null);
     }
   };
 
-  const handleSelectAll = (checked) => {
+  const handleSelectAll = useCallback((checked) => {
     if (checked) {
       const allIds = campaignData.map((campaign) => campaign.campaignId);
       setSelectedItems(new Set(allIds));
     } else {
       setSelectedItems(new Set());
     }
-  };
+  }, [campaignData]);
 
-  const handleSelectItem = (campaignId, checked) => {
+  const handleSelectItem = useCallback((campaignId, checked) => {
     setSelectedItems((prev) => {
       const newSet = new Set(prev);
       if (checked) {
@@ -78,40 +87,37 @@ const Campaign = ({ fetchedData, customColumn }) => {
       }
       return newSet;
     });
-  };
+  }, []);
 
-  const isAllSelected =
-    campaignData.length > 0 && selectedItems.size === campaignData.length;
+  const isAllSelected = useMemo(() => 
+    campaignData.length > 0 && selectedItems.size === campaignData.length,
+  [campaignData.length, selectedItems.size]);
 
   useEffect(() => {
     setCampaignData(fetchedData);
   }, [fetchedData]);
 
   useEffect(() => {
-    if (!activeFilters || activeFilters.length === 0) {
+    if (!activeFilters?.length) {
       setCampaignData(fetchedData);
       return;
     }
 
-    // Get only campaign name filters
     const campaignFilters = activeFilters.filter(
       (rule) => rule.field === "campaign_name"
     );
 
-    // If no campaign filters, return original data
-    if (campaignFilters.length === 0) {
+    if (!campaignFilters.length) {
       setCampaignData(fetchedData);
       return;
     }
 
-    const filteredCampaign = fetchedData.filter((campaign) => {
-      return campaignFilters.every((rule) => {
+    const filteredCampaigns = fetchedData.filter((campaign) =>
+      campaignFilters.every((rule) => {
         const campaignName = (campaign.campaignName || "").trim().toLowerCase();
         const searchValue = (rule.value || "").trim().toLowerCase();
 
-        if (!searchValue) {
-          return true;
-        }
+        if (!searchValue) return true;
 
         switch (rule.condition) {
           case "Contains":
@@ -121,52 +127,64 @@ const Campaign = ({ fetchedData, customColumn }) => {
           default:
             return true;
         }
-      });
-    });
+      })
+    );
 
-    setCampaignData(filteredCampaign);
+    setCampaignData(filteredCampaigns);
     setSelectedItems(new Set());
   }, [activeFilters, fetchedData]);
 
   const handleSwitchToggle = async (campaignId, newStatus) => {
+    setUpdatingStatus(campaignId);
     try {
       const response = await axios.post(`${API_URL}/auth/pause/${campaignId}`, {
         status: newStatus,
       });
-      if (response.status === 200) {
-        toast.success(`Campaign status has be set ${newStatus}`, {
-          position: "bottom-right",
-          duration: 5000,
-        });
-      }
 
+      if (response.data.success) {
+        setCampaignData((prevData) =>
+          prevData.map((campaign) =>
+            campaign.campaignId === campaignId
+              ? { ...campaign, status: newStatus }
+              : campaign
+          )
+        );
+        toast.success(`Campaign status updated to ${newStatus.toLowerCase()}`);
+      } else {
+        throw new Error(response.data.message || "Failed to update status");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update campaign status");
+      // Revert the switch state
       setCampaignData((prevData) =>
         prevData.map((campaign) =>
           campaign.campaignId === campaignId
-            ? { ...campaign, status: newStatus }
+            ? { ...campaign, status: campaign.status === "ACTIVE" ? "PAUSED" : "ACTIVE" }
             : campaign
         )
       );
-    } catch (error) {
-      console.error(`Failed to update campaign ${campaignId} status:`, error);
+    } finally {
+      setUpdatingStatus(null);
     }
   };
 
-  const getValue = (campaign, col) => {
+  const getValue = useCallback((campaign, col) => {
     switch (col) {
       case "Campaign ID":
         return campaign.campaignId;
       case "Campaign Name":
         return campaign.campaignName;
+      case "Buying type":
+        return campaign.buying_type;
+      case "Campaign spending limit":
+        return campaign.spendCap ? formatCurrency(campaign.spendCap) : "—";
       case "Objective":
         return campaign.objective?.substring(8).toLowerCase();
       case "Delivery":
         return (
           <div className="flex items-center gap-2">
             <div
-              className={`w-2 h-2 rounded-full ${
-                campaign.status === "ACTIVE" ? "bg-green-500" : "bg-gray-400"
-              }`}
+              className={`w-2 h-2 rounded-full ${STATUS_COLORS[campaign.status] || "bg-gray-400"}`}
             />
             <span className="text-sm text-gray-600">
               {campaign.status === "ACTIVE" ? "Delivering" : "Not delivering"}
@@ -175,17 +193,12 @@ const Campaign = ({ fetchedData, customColumn }) => {
         );
       case "Bid strategy":
         return campaign.bidStrategy || "Using ad set bid strategy";
-      // Add more cases for other columns
       default:
         return "—";
     }
-  };
+  }, []);
 
-  if (!campaignData || campaignData.length === 0) {
-    return <NoCampaign />;
-  }
-
-  const renderCell = (campaign, columnType) => {
+  const renderCell = useCallback((campaign, columnType) => {
     switch (columnType) {
       case "checkbox":
         return (
@@ -198,15 +211,21 @@ const Campaign = ({ fetchedData, customColumn }) => {
         );
       case "status":
         return (
-          <Switch
-            checked={campaign.status === "ACTIVE"}
-            onCheckedChange={(checked) =>
-              handleSwitchToggle(
-                campaign.campaignId,
-                checked ? "ACTIVE" : "PAUSED"
-              )
-            }
-          />
+          <div className="flex items-center justify-center">
+            {updatingStatus === campaign.campaignId ? (
+              <Loader className="w-4 h-4 animate-spin" />
+            ) : (
+              <Switch
+                checked={campaign.status === "ACTIVE"}
+                onCheckedChange={(checked) =>
+                  handleSwitchToggle(
+                    campaign.campaignId,
+                    checked ? "ACTIVE" : "PAUSED"
+                  )
+                }
+              />
+            )}
+          </div>
         );
       case "campaign":
         return (
@@ -217,30 +236,33 @@ const Campaign = ({ fetchedData, customColumn }) => {
                   type="text"
                   value={editingName}
                   onChange={(e) => setEditingName(e.target.value)}
-                  onBlur={() =>
-                    handleNameUpdate(campaign.campaignId, editingName)
-                  }
+                  onBlur={() => handleNameUpdate(campaign.campaignId, editingName)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter")
+                    if (e.key === "Enter") {
                       handleNameUpdate(campaign.campaignId, editingName);
-                    if (e.key === "Escape") return;
+                    }
+                    if (e.key === "Escape") {
+                      setEditingCampaignId(null);
+                    }
                   }}
-                  className="border rounded px-2 py-1 w-full"
+                  className="border rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                   autoFocus
                 />
-                <button
-                  onClick={() => setEditingCampaignId(null)}
-                  className="text-gray-500 hover:text-red-500"
-                >
-                  ✕
-                </button>
+                {isLoading ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <button
+                    onClick={() => setEditingCampaignId(null)}
+                    className="text-gray-500 hover:text-red-500"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             ) : (
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 group">
-                  <p className="font-medium truncate">
-                    {campaign.campaignName}
-                  </p>
+                  <p className="font-medium truncate">{campaign.campaignName}</p>
                   <Pen
                     size={14}
                     className="opacity-0 group-hover:opacity-100 cursor-pointer text-blue-500"
@@ -251,7 +273,7 @@ const Campaign = ({ fetchedData, customColumn }) => {
                   />
                 </div>
                 <Badge variant="secondary" className="text-xs w-fit">
-                  {campaign?.adSets?.length} Ad sets
+                  {campaign?.adSets?.length || 0} Ad sets
                 </Badge>
               </div>
             )}
@@ -260,17 +282,18 @@ const Campaign = ({ fetchedData, customColumn }) => {
       case "Budget":
         return editingBudgetId === campaign.campaignId ? (
           <BudgetEditor
-            initialBudget={campaign.budget?.replace(/[^0-9.]/g, "") || ""}
+            initialBudget={campaign.dailyBudget?.toString() || ""}
             campaignId={campaign.campaignId}
             onClose={() => setEditingBudgetId(null)}
             onSuccess={(newBudget) => {
               setCampaignData((prevData) =>
                 prevData.map((c) =>
                   c.campaignId === campaign.campaignId
-                    ? { ...c, budget: `${newBudget}` }
+                    ? { ...c, dailyBudget: newBudget }
                     : c
                 )
               );
+              setEditingBudgetId(null);
               toast.success("Budget updated successfully");
             }}
           />
@@ -279,14 +302,14 @@ const Campaign = ({ fetchedData, customColumn }) => {
             className="group flex items-center gap-2 cursor-pointer"
             onClick={() => setEditingBudgetId(campaign.campaignId)}
           >
-            <h1 className="text-xs flex flex-col">
+            <div className="text-xs flex flex-col">
               <span>
                 {campaign.dailyBudget
                   ? formatCurrency(campaign.dailyBudget)
                   : "Using ad set budget"}
               </span>
               <span>Daily</span>
-            </h1>
+            </div>
             <Pen
               size={14}
               className="opacity-0 group-hover:opacity-100 text-blue-500"
@@ -296,7 +319,36 @@ const Campaign = ({ fetchedData, customColumn }) => {
       default:
         return getValue(campaign, columnType);
     }
-  };
+  }, [selectedItems, editingCampaignId, editingBudgetId, isLoading, updatingStatus, editingName, handleSelectItem, getValue]);
+
+  const hiddenColumns = useMemo(() => [
+    // Add the column names you want to hide
+    // For example: "Buying type", "Campaign spending limit"
+    "Preview link",
+    "Link (ad settings)",
+    "URL parameters",
+    "Meta Pixel",
+    "App event",
+    "Offline event",
+    "Included custom audiences",
+    "Excluded custom audiences",
+    "Audience location (Ad set settings)",
+    "Ad ID",
+    "Schedule",
+    "Ad Set Name",
+    "Conversion rate ranking",
+    "Engagement rate ranking",
+    "Quality ranking",
+    "Ad set ID",
+  ], []);
+
+  // Filter out hidden columns from customColumn
+  const visibleColumns = useMemo(() => 
+    customColumn.filter(col => !hiddenColumns.includes(col))
+  , [customColumn, hiddenColumns]);
+  if (!campaignData?.length) {
+    return <NoCampaign />;
+  }
 
   return (
     <div className="border rounded-lg">
@@ -310,19 +362,11 @@ const Campaign = ({ fetchedData, customColumn }) => {
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead className="w-20 border-r">
-                <div className="resize-x overflow-hidden">Status</div>
-              </TableHead>
-              <TableHead className="border-r">
-                <div className="resize-x overflow-hidden min-w-[200px] cursor-col-resize">
-                  Campaign
-                </div>
-              </TableHead>
-              {customColumn.map((col, idx) => (
-                <TableHead key={idx} className="border-r">
-                  <div className="resize-x overflow-hidden min-w-[120px] cursor-col-resize">
-                    {col}
-                  </div>
+              <TableHead className="w-20 border-r">Status</TableHead>
+              <TableHead className="border-r min-w-[200px]">Campaign</TableHead>
+              {visibleColumns.map((col) => (
+                <TableHead key={col} className="border-r min-w-[120px]">
+                  {col}
                 </TableHead>
               ))}
             </TableRow>
@@ -331,10 +375,10 @@ const Campaign = ({ fetchedData, customColumn }) => {
           <TableBody>
             {campaignData.map((campaign) => (
               <TableRow key={campaign.campaignId} className="hover:bg-gray-50">
-                {["checkbox", "status", "campaign", ...customColumn].map(
+                {["checkbox", "status", "campaign", ...visibleColumns].map(
                   (col, idx) => (
                     <TableCell
-                      key={idx}
+                      key={`${campaign.campaignId}-${col}-${idx}`}
                       className={`border-r ${
                         col === "checkbox"
                           ? "w-12"

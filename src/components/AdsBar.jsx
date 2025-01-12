@@ -24,6 +24,7 @@ import SearchBar2 from "./SearchBar2";
 import NoAdsset from "./NoAdsset";
 import AdSetBudgetEditor from "./AdSetBudgetEditor";
 import { formatCurrency } from "@/hooks/func";
+import { formatDate } from "@/functions/resources";
 
 const AdsManager = ({ selectedBar, setSelectedBar }) => {
   const [campaignNames, setCampaignNames] = useState({});
@@ -31,7 +32,7 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
   const [selectedAds, setSelectedAds] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { state, customColumn, activeFilters } = useGlobalContext();
+  const { state, customColumn, activeFilters,fetchAds } = useGlobalContext();
   const [originalData, setOriginalData] = useState([]);
   const [editingAdSetId, setEditingAdSetId] = useState(null);
   const [editingName, setEditingName] = useState("");
@@ -100,6 +101,7 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
           position: "bottom-right",
           duration: 3000,
         });
+        fetchAds()
       }
       setEditingAdSetId(null);
     } catch (error) {
@@ -271,14 +273,6 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
             return adsetName.includes(searchValue);
           case "Doesn`t contain":
             return !adsetName.includes(searchValue);
-          case "Starts with":
-            return adsetName.startsWith(searchValue);
-          case "Ends with":
-            return adsetName.endsWith(searchValue);
-          case "Equals":
-            return adsetName === searchValue;
-          case "Not equals":
-            return adsetName !== searchValue;
           default:
             return true;
         }
@@ -287,6 +281,10 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
 
     setFetchData(filtered);
   }, [activeFilters, originalData]);
+
+  // if (!fetchedData || fetchedData.length === 0) {
+  //   return <NoAdsset />;
+  // }
 
   const getVisibleColumns = () => {
     if (state === "Ads Set") {
@@ -334,6 +332,10 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
         return "—";
       case "Campaign ID":
         return adsset.campaignId;
+      case "Audience location (Ad set settings)":
+        return adsset.targeting?.geo_locations?.countries[0] || "—"
+      case "Schedule":
+        return adsset.start_time ? `${formatDate(adsset.start_time)} - Ongoing` : "—";
       case "Campaign Name":
         return campaignNames[adsset.campaignId] || "—";
         case "Budget":
@@ -341,6 +343,7 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
             <AdSetBudgetEditor
               initialBudget={adsset.dailyBudget?.toString() || ""}
               adSetId={adsset.adSetId}
+              // campaignId={adsset.campaignId}
               onClose={() => setEditingBudgetAdSetId(null)}
               onSuccess={(newBudget) => {
                 setFetchData((prevData) =>
@@ -426,6 +429,8 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
       }
     }
   };
+
+ 
 
   return (
     <div className="w-full py-4 bg-inherit px-0 font-sans">

@@ -105,12 +105,11 @@ const BudgetEditor = ({ initialBudget, campaignId, onClose, onSuccess }) => {
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₦</span>
             <Input
               type="number"
-              value={budget}
+              value={budget / 100}
               onChange={handleBudgetChange}
               className={`pl-7 ${error ? 'border-red-500' : ''}`}
               placeholder="Enter daily budget"
               min="0"
-              step="0.01"
               disabled={isSubmitting}
             />
           </div>

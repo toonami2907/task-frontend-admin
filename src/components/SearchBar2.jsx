@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import React, { useState, useEffect, useCallback } from "react";
 import { X, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -27,7 +28,7 @@ const SearchBar2 = () => {
   });
   const { setActiveFilters, activeFilters } = useGlobalContext();
 
-  const MAX_VISIBLE_FILTERS = 2;
+  const MAX_VISIBLE_FILTERS = 20;
   const isAtMaxFilters = filters.length >= MAX_VISIBLE_FILTERS;
 
   const searchCategories = [
@@ -87,11 +88,11 @@ const SearchBar2 = () => {
   }, [selectedFilter, tempFilter]);
 
   const FilterCard = ({ filter, index, onRemove }) => (
-    <div className="flex items-center gap-2 bg-gray-200 text-gray-700 rounded px-2 py-1">
-      <span className="text-sm">
+    <div className={`${filter.length >= 4 ? 'text-xs py-0' : ' px-2 py-1'} flex items-center gap-2 bg-gray-200 text-gray-700 rounded`}>
+      <span className={`${filter.length >= 4 ? 'text-xs' : 'text-sm'}`}>
         {filter.label}{" "}
         <span 
-          className="text-black font-medium cursor-pointer hover:text-blue-600"
+          className="text-black font-medium cursor-pointer text-xs hover:text-blue-600"
           onClick={() => handleEditFilter(filter, index)}
         >
           {filter.condition} {filter.value}
@@ -118,7 +119,7 @@ const SearchBar2 = () => {
   }, [filters, setActiveFilters]);
 
   return (
-    <div className="w-full max-w-screen-md  mb-2 relative font-sans">
+    <div className="w-full max-w-screen-sm mb-2 relative font-sans">
       <div className="relative">
         <div className="flex items-start border border-gray-300 rounded-3xl bg-white">
           <div className="flex flex-wrap gap-2 p-2 w-full min-h-[30px]">

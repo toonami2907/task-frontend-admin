@@ -35,20 +35,36 @@ li{
   src: url('./assets/fonts/static/Inter_24pt-Light.ttf') format('truetype');
 }
 
+.loading-overlay {
+  transition: opacity 0.2s ease-in-out;
+}
+
+.table-cell-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  user-select: none;
+}
+
+.resize-handle:hover {
+  background-color: rgba(59, 130, 246, 0.5);
+}
+
 
 @layer components {
   body{
     @apply text-sm font-sans text-gray-700;
   }
-  /* .font-medium {
-    @apply font-['Inter-Med']
-  }
-  .font-semibold {
-    @apply font-['Inter-Sem']
-  }
-  .font-bold {
-    @apply font-['Inter-Bold']
-  } */
+
   .defaut_head_style{
     @apply max-w-[1300px] px-5 md:px-10 xl:px-0 w-full mx-auto
 }

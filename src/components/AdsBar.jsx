@@ -26,7 +26,7 @@ import AdSetBudgetEditor from "./AdSetBudgetEditor";
 import { formatCurrency } from "@/hooks/func";
 import { formatDate } from "@/functions/resources";
 
-const AdsManager = ({ selectedBar, setSelectedBar }) => {
+const AdsManager = ({ selectedBar, setSelectedBar, SelectedCamapiagn, SetCamapiagn }) => {
   const [campaignNames, setCampaignNames] = useState({});
   const [fetchedData, setFetchData] = useState([]);
   const [selectedAds, setSelectedAds] = useState([]);
@@ -36,6 +36,8 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
   const [originalData, setOriginalData] = useState([]);
   const [editingAdSetId, setEditingAdSetId] = useState(null);
   const [editingName, setEditingName] = useState("");
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
+  const [isCampaignFilterLoading, setIsCampaignFilterLoading] = useState(false);
   const [editingBudgetAdSetId, setEditingBudgetAdSetId] = useState(null);
 
   const LoadingSpinner = () => (
@@ -233,58 +235,80 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
   const hasData = (data) => Array.isArray(data) && data.length > 0;
 
   const adsData = (() => {
-    // When selectedBar exists, strictly use selectedAds (even if empty)
+
     if (selectedBar?.length > 0) {
       return selectedAds;
     }
 
-    // When no selections, use original data
     return originalData;
   })();
 
   useEffect(() => {
-    if (!activeFilters || activeFilters.length === 0) {
-      setFetchData(originalData);
-      return;
+    let currentData = originalData;
+  
+    // First filter by selected campaigns if in Ad Set view
+    if (state === "Ads Set" && SelectedCamapiagn?.length) {
+      currentData = currentData.filter(adSet => 
+        SelectedCamapiagn.includes(adSet.campaignId)
+      );
     }
-
-    // Get only adset name filters
-    const adsetFilters = activeFilters.filter(
-      (rule) => rule.field === "adset_name"
-    );
-
-    // If no adset filters, return original data
-    if (adsetFilters.length === 0) {
-      setFetchData(originalData);
-      return;
+  
+    // Then apply active filters
+    if (activeFilters?.length) {
+      const adsetFilters = activeFilters.filter(
+        (rule) => rule.field === "adset_name"
+      );
+  
+      if (adsetFilters.length) {
+        currentData = currentData.filter((adsset) => {
+          return adsetFilters.every((rule) => {
+            const adsetName = (adsset.adSetName || "").trim().toLowerCase();
+            const searchValue = (rule.value || "").trim().toLowerCase();
+  
+            if (!searchValue) return true;
+  
+            switch (rule.condition) {
+              case "Contains":
+                return adsetName.includes(searchValue);
+              case "Doesn`t contain":
+                return !adsetName.includes(searchValue);
+              default:
+                return true;
+            }
+          });
+        });
+      }
     }
+  
+    setFetchData(currentData);
+  }, [activeFilters, originalData, state]);
+  
 
-    const filtered = originalData.filter((adsset) => {
-      return adsetFilters.every((rule) => {
-        const adsetName = (adsset.adSetName || "").trim().toLowerCase();
-        const searchValue = (rule.value || "").trim().toLowerCase();
+useEffect(() => {
+  if (state !== "Ads Set") return;
 
-        if (!searchValue) {
-          return true;
-        }
+  setIsCampaignFilterLoading(true);
 
-        switch (rule.condition) {
-          case "Contains":
-            return adsetName.includes(searchValue);
-          case "Doesn`t contain":
-            return !adsetName.includes(searchValue);
-          default:
-            return true;
-        }
-      });
-    });
+  // Use requestAnimationFrame for smoother transitions
+  const filterTimeout = requestAnimationFrame(() => {
+    try {
+      let filteredData = originalData;
+      
+      if (SelectedCamapiagn?.length) {
+        filteredData = originalData.filter(adSet => 
+          SelectedCamapiagn.includes(adSet.campaignId)
+        );
+      }
 
-    setFetchData(filtered);
-  }, [activeFilters, originalData]);
+      setFetchData(filteredData);
+    } finally {
+      setIsCampaignFilterLoading(false);
+    }
+  });
 
-  // if (!fetchedData || fetchedData.length === 0) {
-  //   return <NoAdsset />;
-  // }
+  return () => cancelAnimationFrame(filterTimeout);
+}, [SelectedCamapiagn, originalData, state]);
+
 
   const getVisibleColumns = () => {
     if (state === "Ads Set") {
@@ -449,12 +473,12 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
         <LoadingSpinner />
       ) : hasData(originalData) ? (
         <Table>
-          {state === "Campaign" && <Campaign fetchedData={originalData} customColumn={customColumn} />}
+          {state === "Campaign" && <Campaign fetchedData={originalData} SetCamapiagn={SetCamapiagn}  SelectedCamapiagn={SelectedCamapiagn}  customColumn={customColumn} />}
           {state === "Ads Set" && (
             <>
               <TableHeader>
                 <TableRow className="bg-gray-50 h-10">
-                  <TableHead className="w-12 p-2 select-none border-r">
+                  <TableHead className="w-12 p-2 select-none">
                     <Checkbox
                       checked={
                         fetchedData.length > 0 &&
@@ -474,8 +498,8 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
                   <TableHead className="w-20 p-2 select-none border-r">
                     <div className="flex items-center">Off/On</div>
                   </TableHead>
-                  <TableHead className="text-lg font-medium p-2 min-w-[200px] select-none border-r">
-                    <div className="resize-x overflow-hidden">Ad Sets</div>
+                  <TableHead className="text-lg font-medium p-2 min-w-[60px] select-none border-r">
+                    <div className="">Ad Sets</div>
                   </TableHead>
                   {getVisibleColumns().map((col, idx) => (
                     <TableHead
@@ -491,13 +515,14 @@ const AdsManager = ({ selectedBar, setSelectedBar }) => {
                   ))}
                 </TableRow>
               </TableHeader>
+              
               <TableBody>
                 {fetchedData.map((adsset, idx) => (
                   <TableRow
                     key={idx}
                     className="h-5 hover:bg-gray-50 transition-colors"
                   >
-                    <TableCell className="p-2 w-12 border-r">
+                    <TableCell className="p-2 w-12 ">
                       <Checkbox
                         checked={selectedBar?.includes(adsset.adSetId) || false}
                         onCheckedChange={() => {

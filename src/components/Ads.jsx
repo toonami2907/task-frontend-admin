@@ -9,6 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable"
 import { Switch } from "./ui/switch";
 import { Checkbox } from "./ui/checkbox";
 import { Link, Pen } from "lucide-react";
@@ -168,7 +173,7 @@ const Ads = ({
                   <div className="flex items-center">Off/On</div>
                 </TableHead>
                 <TableHead className="text-lg font-medium min-w-[200px] select-none border-r">
-                  <div className="resize-x overflow-hidden">Ads</div>
+                  <div className=" overflow-hidden">Ads</div>
                 </TableHead>
                 {customColumn.map((col, idx) => (
                   <TableHead
@@ -209,7 +214,7 @@ const Ads = ({
                       }
                     />
                   </TableCell>
-                  <TableCell className="min-w-[200px] border-r">
+                  <TableCell className="max-w-[300px] border-r">
                     <div className="flex items-center space-x-3">
                       <div
                         className="relative cursor-pointer"
@@ -218,7 +223,7 @@ const Ads = ({
                         <img
                           src={ads.creative && ads.creative.thumbnailUrl}
                           alt={ads.adName}
-                          className="h-8 w-8 object-cover rounded hover:ring-2 hover:ring-blue-500"
+                          className="h-8 max-w-8 object-cover rounded hover:ring-2 hover:ring-blue-500"
                         />
                       </div>
                       <span

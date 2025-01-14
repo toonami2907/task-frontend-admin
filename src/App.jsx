@@ -6,11 +6,13 @@ import { useGlobalContext } from "@/functions/features/StateProvider";
 
 const App = () => {
   const [barData, setBarData] = useState([]);
+  const [campaignSelect, setCampaignSelect] = useState([]);
   const [loading, setLoading] = useState(false)
   const {fetchAds} = useGlobalContext()
+  
   useEffect(() => {
 
-  }, [barData]);
+  }, [barData, campaignSelect]);
 
 
 
@@ -32,21 +34,24 @@ const Reload = ()=>{
 
   return (
     <div className="">
-      <div className="w-full pr-5 justify-end items-end my-2 flex">
+      
+      {/* <div className="my-5"></div> */}
+      <div className=" relative my-10 bg-inherit min-w-screen w-full">
+      {/* <div className="w-full pr-5 justify-end absolute top-0 items-end flex"> */}
         <TimestampWithReload
           timestamp={new Date()}
           onReload={Reload}
           isLoading={loading}
         />
-      </div>
-      <div className="my-5"></div>
-      <div className=" relative my-10 bg-inherit min-w-screen w-full">
+
         <MyTabs
           selectedBarLength={barData.length}
           SelectedBarState={setBarData}
+          SelectedCamapiagn={setCampaignSelect}
+          SelectedCamapiagnLength={campaignSelect.length}
         />
         <div className="absolute top-14 w-full z-20 bg-white">
-          <AdsManager selectedBar={barData} setSelectedBar={setBarData} />
+          <AdsManager selectedBar={barData} setSelectedBar={setBarData}   SetCamapiagn={setCampaignSelect}  SelectedCamapiagn={campaignSelect} />
         </div>
       </div>
     </div>

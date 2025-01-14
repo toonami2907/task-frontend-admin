@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import {
@@ -23,7 +24,7 @@ const STATUS_COLORS = {
   PAUSED: "bg-gray-400",
 };
 
-const Campaign = ({ fetchedData, customColumn }) => {
+const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn, SetCamapiagn }) => {
   const [campaignData, setCampaignData] = useState(fetchedData);
   const { activeFilters, fetchAds } = useGlobalContext();
   const [selectedItems, setSelectedItems] = useState(new Set());
@@ -70,10 +71,12 @@ const Campaign = ({ fetchedData, customColumn }) => {
 
   const handleSelectAll = useCallback((checked) => {
     if (checked) {
+      SetCamapiagn(campaignData.map((campaign) => campaign.campaignId))
       const allIds = campaignData.map((campaign) => campaign.campaignId);
       setSelectedItems(new Set(allIds));
     } else {
       setSelectedItems(new Set());
+      SetCamapiagn([])
     }
   }, [campaignData]);
 
@@ -89,9 +92,7 @@ const Campaign = ({ fetchedData, customColumn }) => {
     });
   }, []);
 
-  const isAllSelected = useMemo(() => 
-    campaignData.length > 0 && selectedItems.size === campaignData.length,
-  [campaignData.length, selectedItems.size]);
+
 
   useEffect(() => {
     setCampaignData(fetchedData);
@@ -203,10 +204,19 @@ const Campaign = ({ fetchedData, customColumn }) => {
       case "checkbox":
         return (
           <Checkbox
-            checked={selectedItems.has(campaign.campaignId)}
-            onCheckedChange={(checked) =>
+            checked={SelectedCamapiagn?.includes(campaign.campaignId) || false}
+            onCheckedChange={(checked) =>{
               handleSelectItem(campaign.campaignId, checked)
-            }
+              SetCamapiagn((prev)=> {
+                const exists = prev?.some(
+                  (item)=> item === campaign.campaignId
+                );
+                if(exists){
+                  return prev.filter((item)=> item !== campaign.campaignId);
+                }
+                return [...(prev || []), campaign.campaignId];
+              });
+            }}
           />
         );
       case "status":
@@ -298,23 +308,44 @@ const Campaign = ({ fetchedData, customColumn }) => {
             }}
           />
         ) : (
-          <div
-            className="group flex items-center gap-2 cursor-pointer"
-            onClick={() => setEditingBudgetId(campaign.campaignId)}
-          >
-            <div className="text-xs flex flex-col">
-              <span>
-                {campaign.dailyBudget
-                  ? formatCurrency(campaign.dailyBudget)
-                  : "Using ad set budget"}
-              </span>
-              <span>Daily</span>
-            </div>
-            <Pen
-              size={14}
-              className="opacity-0 group-hover:opacity-100 text-blue-500"
-            />
-          </div>
+          <>
+          {campaign.dailyBudget ? (
+               <div
+               className="group flex items-center gap-2 cursor-pointer"
+               onClick={() => setEditingBudgetId(campaign.campaignId)}
+             >
+               <div className="text-xs flex flex-col">
+                 <span>
+                   {campaign.dailyBudget
+                     ? formatCurrency(campaign.dailyBudget)
+                     : "Using ad set budget"}
+                 </span>
+                 <span>Daily</span>
+               </div>
+               <Pen
+                 size={14}
+                 className={`${campaign.dailyBudget ? 'opacity-0 group-hover:opacity-100 text-blue-500': 'hidden'}`}
+               />
+             </div>
+          ) : (
+            <div
+               className="group flex items-center gap-2 cursor-pointer"
+             >
+               <div className="text-xs flex flex-col">
+                 <span>
+                   {campaign.dailyBudget
+                     ? formatCurrency(campaign.dailyBudget)
+                     : "Using ad set budget"}
+                 </span>
+                 <span>Daily</span>
+               </div>
+               <Pen
+                 size={14}
+                 className={`${campaign.dailyBudget ? 'opacity-0 group-hover:opacity-100 text-blue-500': 'hidden'}`}
+               />
+             </div>
+          )}
+          </>
         );
       default:
         return getValue(campaign, columnType);
@@ -358,7 +389,7 @@ const Campaign = ({ fetchedData, customColumn }) => {
             <TableRow className="bg-gray-50">
               <TableHead className="w-12 select-none border-r">
                 <Checkbox
-                  checked={isAllSelected}
+                  checked={campaignData.length > 0 && SelectedCamapiagn?.length === campaignData.length}
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>

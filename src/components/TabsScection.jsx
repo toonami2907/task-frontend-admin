@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Folder, LayoutDashboardIcon, Book, X } from "lucide-react";
 import { useGlobalContext } from "@/functions/features/StateProvider";
 
-const MyTabs = ({ selectedBarLength, SelectedBarState }) => {
+const MyTabs = ({ selectedBarLength, SelectedBarState,SelectedCamapiagnLength, SelectedCamapiagn  }) => {
   const { setState, state } = useGlobalContext();
 
   function handleTabChange(value) {
@@ -20,7 +20,7 @@ const MyTabs = ({ selectedBarLength, SelectedBarState }) => {
       <Tabs
         value={state}
         onValueChange={(value) => handleTabChange(value)}
-        className="max-w-screen-lg w-full "
+        className="max-w-screen-md w-full "
       >
         <TabsList className="w-full borderr grid grid-cols-3 bg-inherit p-0 gap-5 h-[150px]">
           <TabsTrigger
@@ -31,6 +31,13 @@ const MyTabs = ({ selectedBarLength, SelectedBarState }) => {
               <Folder />
               Campaign
             </h1>
+            {SelectedCamapiagnLength > 0 && (
+              <div className="bg-blue-600 rounded-lg flex items-center gap-2 text-xs p-2 text-white">
+                <span> {SelectedCamapiagnLength} selected</span> <span onClick={()=>{
+                  SelectedCamapiagn([])
+                }}><X size={20} /></span>
+              </div>
+            )}
           </TabsTrigger>
           <TabsTrigger
             className="flex items-start justify-between bg-gray-100 h-full border shadow-sm p-2"

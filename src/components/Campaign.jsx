@@ -142,7 +142,7 @@ const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn, SetCamapiagn 
         status: newStatus,
       });
 
-      if (response.data.success) {
+      if (response.status == 200) {
         setCampaignData((prevData) =>
           prevData.map((campaign) =>
             campaign.campaignId === campaignId
@@ -169,6 +169,10 @@ const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn, SetCamapiagn 
     }
   };
 
+
+
+
+  
   const getValue = useCallback((campaign, col) => {
     switch (col) {
       case "Campaign ID":
@@ -240,54 +244,61 @@ const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn, SetCamapiagn 
       case "campaign":
         return (
           <>
-            {editingCampaignId === campaign.campaignId ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  onBlur={() => handleNameUpdate(campaign.campaignId, editingName)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleNameUpdate(campaign.campaignId, editingName);
-                    }
-                    if (e.key === "Escape") {
-                      setEditingCampaignId(null);
-                    }
+          {editingCampaignId === campaign.campaignId ? (
+            <div className="flex flex-col space-y-2">
+              <input
+                type="text"
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleNameUpdate(campaign.campaignId, editingName);
+                  }
+                  if (e.key === "Escape") {
+                    setEditingCampaignId(null);
+                  }
+                }}
+                className="border rounded px-2 py-1 w-full font-normal focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoFocus
+                placeholder="Enter new campaign name"
+              />
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setEditingCampaignId(null)}
+                  className="w-1/2 border rounded py-1 text-sm hover:bg-gray-100"
+                  disabled={isLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleNameUpdate(campaign.campaignId, editingName)}
+                  className="w-1/2 bg-blue-500 text-white rounded py-1 text-sm hover:bg-blue-600"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 group">
+                <p className="font-medium truncate max-w-[200px]">{campaign.campaignName}</p>
+                <Pen
+                  size={14}
+                  className="opacity-0 group-hover:opacity-100 cursor-pointer text-blue-500"
+                  onClick={() => {
+                    setEditingCampaignId(campaign.campaignId);
+                    setEditingName(campaign.campaignName);
                   }}
-                  className="border rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  autoFocus
                 />
-                {isLoading ? (
-                  <Loader className="w-4 h-4 animate-spin" />
-                ) : (
-                  <button
-                    onClick={() => setEditingCampaignId(null)}
-                    className="text-gray-500 hover:text-red-500"
-                  >
-                    ✕
-                  </button>
-                )}
               </div>
-            ) : (
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 group">
-                  <p className="font-medium truncate">{campaign.campaignName}</p>
-                  <Pen
-                    size={14}
-                    className="opacity-0 group-hover:opacity-100 cursor-pointer text-blue-500"
-                    onClick={() => {
-                      setEditingCampaignId(campaign.campaignId);
-                      setEditingName(campaign.campaignName);
-                    }}
-                  />
-                </div>
-                <Badge variant="secondary" className="text-xs w-fit">
-                  {campaign?.adSets?.length || 0} Ad sets
-                </Badge>
-              </div>
-            )}
-          </>
+              <Badge variant="secondary" className="text-xs w-fit">
+                {campaign?.adSets?.length || 0} Ad sets
+              </Badge>
+            </div>
+          )}
+        </>
+        
         );
       case "Budget":
         return editingBudgetId === campaign.campaignId ? (
@@ -337,7 +348,9 @@ const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn, SetCamapiagn 
                      ? formatCurrency(campaign.dailyBudget)
                      : "Using ad set budget"}
                  </span>
-                 <span>Daily</span>
+                 {campaign.dailyBudget && (
+                   <span>Daily</span>
+                 )}
                </div>
                <Pen
                  size={14}
@@ -405,7 +418,13 @@ const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn, SetCamapiagn 
 
           <TableBody>
             {campaignData.map((campaign) => (
-              <TableRow key={campaign.campaignId} className="hover:bg-gray-50">
+              <TableRow key={campaign.campaignId} 
+              className={`h-5 group transition-colors ${
+                SelectedCamapiagn?.includes(campaign.campaignId)
+                  ? "bg-green-100 hover:bg-green-50"
+                  : " hover:bg-gray-50 "
+              }`}
+              >
                 {["checkbox", "status", "campaign", ...visibleColumns].map(
                   (col, idx) => (
                     <TableCell

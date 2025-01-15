@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ErrorToast } from "@/hooks/customToast";
 import { API_URL, useGlobalContext } from "@/functions/features/StateProvider";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,24 +22,32 @@ import Campaign from "./Campaign";
 import Ads from "./Ads";
 import AdsCalendarDialog from "./AdsCalendarDialog";
 import SearchBar2 from "./SearchBar2";
-import NoAdsset from "./NoAdsset";
+
 import AdSetBudgetEditor from "./AdSetBudgetEditor";
 import { formatCurrency } from "@/hooks/func";
 import { formatDate } from "@/functions/resources";
+import SelectState from "@/components/SelectState";
 
-const AdsManager = ({ selectedBar, setSelectedBar, SelectedCamapiagn, SetCamapiagn }) => {
+const AdsManager = ({
+  selectedBar,
+  setSelectedBar,
+  SelectedCamapiagn,
+  SetCamapiagn,
+}) => {
   const [campaignNames, setCampaignNames] = useState({});
   const [fetchedData, setFetchData] = useState([]);
   const [selectedAds, setSelectedAds] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { state, customColumn, activeFilters,fetchAds } = useGlobalContext();
+  const { state, customColumn, activeFilters, fetchAds } = useGlobalContext();
   const [originalData, setOriginalData] = useState([]);
   const [editingAdSetId, setEditingAdSetId] = useState(null);
   const [editingName, setEditingName] = useState("");
   const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [isCampaignFilterLoading, setIsCampaignFilterLoading] = useState(false);
   const [editingBudgetAdSetId, setEditingBudgetAdSetId] = useState(null);
+  const [disableState, setDisableState] = useState("");
+  const [adsSelectedBar, setAdsSelectedBar] = useState([]);
 
   const LoadingSpinner = () => (
     <div className="flex items-center justify-center w-full py-8">
@@ -103,11 +112,41 @@ const AdsManager = ({ selectedBar, setSelectedBar, SelectedCamapiagn, SetCamapia
           position: "bottom-right",
           duration: 3000,
         });
-        fetchAds()
+        fetchAds();
       }
       setEditingAdSetId(null);
     } catch (error) {
       toast.error("Failed to update ad set name", {
+        position: "bottom-right",
+        duration: 3000,
+      });
+    }
+  };
+  const handleAdSetStatusChange = async (adSetId, currentStatus) => {
+    const newStatus = currentStatus === "ACTIVE" ? "PAUSED" : "ACTIVE";
+
+    try {
+      const endpoint = `${API_URL}/auth/pause/Adset/${adSetId}`;
+      await axios.post(
+        endpoint,
+        { status: newStatus },
+        { withCredentials: true }
+      );
+
+      setFetchData((prevData) =>
+        prevData.map((adSet) =>
+          adSet.adSetId === adSetId ? { ...adSet, status: newStatus } : adSet
+        )
+      );
+
+      toast.success(`Ad Set ${newStatus.toLowerCase()} successfully`, {
+        position: "bottom-right",
+        duration: 3000,
+      });
+
+      fetchAds();
+    } catch (error) {
+      toast.error(`Failed to update Ad Set status: ${error.message}`, {
         position: "bottom-right",
         duration: 3000,
       });
@@ -235,7 +274,6 @@ const AdsManager = ({ selectedBar, setSelectedBar, SelectedCamapiagn, SetCamapia
   const hasData = (data) => Array.isArray(data) && data.length > 0;
 
   const adsData = (() => {
-
     if (selectedBar?.length > 0) {
       return selectedAds;
     }
@@ -245,28 +283,28 @@ const AdsManager = ({ selectedBar, setSelectedBar, SelectedCamapiagn, SetCamapia
 
   useEffect(() => {
     let currentData = originalData;
-  
+
     // First filter by selected campaigns if in Ad Set view
     if (state === "Ads Set" && SelectedCamapiagn?.length) {
-      currentData = currentData.filter(adSet => 
+      currentData = currentData.filter((adSet) =>
         SelectedCamapiagn.includes(adSet.campaignId)
       );
     }
-  
+
     // Then apply active filters
     if (activeFilters?.length) {
       const adsetFilters = activeFilters.filter(
         (rule) => rule.field === "adset_name"
       );
-  
+
       if (adsetFilters.length) {
         currentData = currentData.filter((adsset) => {
           return adsetFilters.every((rule) => {
             const adsetName = (adsset.adSetName || "").trim().toLowerCase();
             const searchValue = (rule.value || "").trim().toLowerCase();
-  
+
             if (!searchValue) return true;
-  
+
             switch (rule.condition) {
               case "Contains":
                 return adsetName.includes(searchValue);
@@ -279,36 +317,34 @@ const AdsManager = ({ selectedBar, setSelectedBar, SelectedCamapiagn, SetCamapia
         });
       }
     }
-  
+
     setFetchData(currentData);
   }, [activeFilters, originalData, state]);
-  
 
-useEffect(() => {
-  if (state !== "Ads Set") return;
+  useEffect(() => {
+    if (state !== "Ads Set") return;
 
-  setIsCampaignFilterLoading(true);
+    setIsCampaignFilterLoading(true);
 
-  // Use requestAnimationFrame for smoother transitions
-  const filterTimeout = requestAnimationFrame(() => {
-    try {
-      let filteredData = originalData;
-      
-      if (SelectedCamapiagn?.length) {
-        filteredData = originalData.filter(adSet => 
-          SelectedCamapiagn.includes(adSet.campaignId)
-        );
+    // Use requestAnimationFrame for smoother transitions
+    const filterTimeout = requestAnimationFrame(() => {
+      try {
+        let filteredData = originalData;
+
+        if (SelectedCamapiagn?.length) {
+          filteredData = originalData.filter((adSet) =>
+            SelectedCamapiagn.includes(adSet.campaignId)
+          );
+        }
+
+        setFetchData(filteredData);
+      } finally {
+        setIsCampaignFilterLoading(false);
       }
+    });
 
-      setFetchData(filteredData);
-    } finally {
-      setIsCampaignFilterLoading(false);
-    }
-  });
-
-  return () => cancelAnimationFrame(filterTimeout);
-}, [SelectedCamapiagn, originalData, state]);
-
+    return () => cancelAnimationFrame(filterTimeout);
+  }, [SelectedCamapiagn, originalData, state]);
 
   const getVisibleColumns = () => {
     if (state === "Ads Set") {
@@ -357,48 +393,63 @@ useEffect(() => {
       case "Campaign ID":
         return adsset.campaignId;
       case "Audience location (Ad set settings)":
-        return adsset.targeting?.geo_locations?.countries[0] || "—"
+        return adsset.targeting?.geo_locations?.countries[0] || "—";
       case "Schedule":
-        return adsset.start_time ? `${formatDate(adsset.start_time)} - Ongoing` : "—";
+        return adsset.start_time
+          ? `${formatDate(adsset.start_time)} - Ongoing`
+          : "—";
       case "Campaign Name":
         return campaignNames[adsset.campaignId] || "—";
-        case "Budget":
-          return editingBudgetAdSetId === adsset.adSetId ? (
-            <AdSetBudgetEditor
-              initialBudget={adsset.dailyBudget?.toString() || ""}
-              adSetId={adsset.adSetId}
-              // campaignId={adsset.campaignId}
-              onClose={() => setEditingBudgetAdSetId(null)}
-              onSuccess={(newBudget) => {
-                setFetchData((prevData) =>
-                  prevData.map((set) =>
-                    set.adSetId === adsset.adSetId
-                      ? { ...set, dailyBudget: newBudget }
-                      : set
-                  )
-                );
-                toast.success("Ad set budget updated successfully");
-              }}
-            />
-          ) : (
-            <div
-              className="group flex items-center gap-2 cursor-pointer"
-              onClick={() => setEditingBudgetAdSetId(adsset.adSetId)}
-            >
-              <div className="text-xs flex flex-col">
-                <span>
-                  {adsset.dailyBudget
-                    ? `${formatCurrency(adsset.dailyBudget)}`
-                    : "—"}
-                </span>
-                <span className="text-gray-500">Daily</span>
-              </div>
+      case "Budget":
+        return editingBudgetAdSetId === adsset.adSetId ? (
+          <AdSetBudgetEditor
+            initialBudget={adsset.dailyBudget?.toString() || ""}
+            adSetId={adsset.adSetId}
+            // campaignId={adsset.campaignId}
+            onClose={() => setEditingBudgetAdSetId(null)}
+            onSuccess={(newBudget) => {
+              setFetchData((prevData) =>
+                prevData.map((set) =>
+                  set.adSetId === adsset.adSetId
+                    ? { ...set, dailyBudget: newBudget }
+                    : set
+                )
+              );
+              toast.success("Ad set budget updated successfully");
+            }}
+          />
+        ) : (
+          <div
+            className="group flex items-center gap-2 cursor-pointer"
+            onClick={() => setEditingBudgetAdSetId(adsset.adSetId)}
+          >
+            <div className="text-xs flex flex-col">
+              <span>
+                {adsset.campaignObjective === "OUTCOME_TRAFFIC" ||
+                adsset.campaignObjective === "OUTCOME_ENGAGEMENT"
+                  ? "Using campaign budget"
+                  : adsset.dailyBudget
+                  ? `${formatCurrency(adsset.dailyBudget)}`
+                  : "—"}
+              </span>
+
+              {!(
+                adsset.campaignObjective === "OUTCOME_TRAFFIC" ||
+                adsset.campaignObjective === "OUTCOME_ENGAGEMENT"
+              ) && <span className="text-gray-500">Daily</span>}
+            </div>
+
+            {!(
+              adsset.campaignObjective === "OUTCOME_TRAFFIC" ||
+              adsset.campaignObjective === "OUTCOME_ENGAGEMENT"
+            ) && (
               <Pen
                 size={14}
                 className="opacity-0 group-hover:opacity-100 text-blue-500"
               />
-            </div>
-          );
+            )}
+          </div>
+        );
       case "Delivery":
         return (
           <div className="flex items-center gap-2">
@@ -453,15 +504,85 @@ useEffect(() => {
       }
     }
   };
+  const handleStateStatus = async (action) => {
+    const statusMap = {
+      Campaign: {
+        ids: SelectedCamapiagn,
+        endpoint: `${API_URL}/auth/pause/status/campaigns`,
+        idField: "campaignIds",
+        entityName: "Campaign",
+      },
+      "Ads Set": {
+        ids: selectedBar,
+        endpoint: `${API_URL}/auth/pause/status/AdSets`,
+        idField: "adSetIds",
+        entityName: "Ads set",
+      },
+      Ads: {
+        ids: adsSelectedBar,
+        endpoint: `${API_URL}/auth/pause/status/Ads`,
+        idField: "adIds",
+        entityName: "Ads",
+      },
+    };
 
- 
+    const entityConfig = statusMap[state];
+    if (!entityConfig) return;
+
+    if (!entityConfig.ids?.length) {
+      ErrorToast(`Please select ${entityConfig.entityName}(s) first`);
+      return;
+    }
+
+    try {
+      const status = action === "On" ? "ACTIVE" : "PAUSED";
+      const payload = {
+        status,
+        [entityConfig.idField]: entityConfig.ids,
+      };
+
+      const response = await axios.post(entityConfig.endpoint, payload);
+
+      if (response.status === 200) {
+        toast.success(
+          `${
+            entityConfig.entityName
+          } status changed to ${status.toLowerCase()} successfully`
+        );
+        setDisableState("");
+        fetchAds();
+      }
+    } catch (error) {
+      toast.error(
+        `Error changing ${entityConfig.entityName.toLowerCase()} status: ${
+          error.message
+        }`
+      );
+      console.error(`Error while changing ${entityConfig.entityName}:`, error);
+    }
+  };
+
+  //  if(state === 'Campaign'){
+  //      console.log('Campaign', SelectedCamapiagn)
+  //   } else if(state === 'Ads Set'){
+  //      console.log('Ads set ', selectedBar)
+  //   }else if (state === 'Ads'){
+  //     console.log('Ads', adsSelectedBar)
+  //   }
 
   return (
     <div className="w-full py-4 bg-inherit px-0 font-sans">
       {/* Top Navigation */}
-      <div className="flex  items-center justify-between  px-5 pb-2">
-        <SearchBar2 />
-        <div className="flex items-center justify-end space-x-4">
+      <div className="flex  items-center justify-between mb-2  px-5 pb-2">
+        <div className="flex items-center w-full gap-2">
+          <SelectState
+            state={disableState}
+            setState={setDisableState}
+            handleStateStatus={handleStateStatus}
+          />
+          <SearchBar2 />
+        </div>
+        <div className="flex items-center justify-end gap-2 w-full">
           <AdsCalendarDialog />
           <StyledDropdown />
           <DeliveryBar />
@@ -473,7 +594,14 @@ useEffect(() => {
         <LoadingSpinner />
       ) : hasData(originalData) ? (
         <Table>
-          {state === "Campaign" && <Campaign fetchedData={originalData} SetCamapiagn={SetCamapiagn}  SelectedCamapiagn={SelectedCamapiagn}  customColumn={customColumn} />}
+          {state === "Campaign" && (
+            <Campaign
+              fetchedData={originalData}
+              SetCamapiagn={SetCamapiagn}
+              SelectedCamapiagn={SelectedCamapiagn}
+              customColumn={customColumn}
+            />
+          )}
           {state === "Ads Set" && (
             <>
               <TableHeader>
@@ -515,12 +643,17 @@ useEffect(() => {
                   ))}
                 </TableRow>
               </TableHeader>
-              
+
               <TableBody>
                 {fetchedData.map((adsset, idx) => (
                   <TableRow
                     key={idx}
-                    className="h-5 hover:bg-gray-50 transition-colors"
+                    className={`h-5 transition-colors ${
+                      selectedBar?.includes(adsset.adSetId)
+                        ? "bg-green-100 hover:bg-green-50" // Selected state
+                        : "hover:bg-gray-50 h-5  transition-colors" // Default hover state
+                    }`}
+                    // className=""
                   >
                     <TableCell className="p-2 w-12 ">
                       <Checkbox
@@ -541,12 +674,17 @@ useEffect(() => {
                       />
                     </TableCell>
                     <TableCell className="p-2 w-20 border-r">
-                      <Switch checked={true} />
+                      <Switch
+                        checked={adsset.status === "ACTIVE"}
+                        onCheckedChange={() =>
+                          handleAdSetStatusChange(adsset.adSetId, adsset.status)
+                        }
+                      />
                     </TableCell>
                     <TableCell className="font-semibold p-2 min-w-[200px] border-r">
                       <div className="space-y-1">
                         {editingAdSetId === adsset.adSetId ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-col space-y-2">
                             <input
                               type="text"
                               value={editingName}
@@ -562,20 +700,35 @@ useEffect(() => {
                                   handleCancel();
                                 }
                               }}
-                              className="border rounded px-2 py-1 w-full font-normal"
+                              className="border rounded px-2 py-1 w-full font-normal focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               autoFocus
+                              placeholder="Enter new ad set name"
                             />
-                            <button
-                              onClick={handleCancel}
-                              className="text-gray-500 hover:text-red-500"
-                              type="button"
-                            >
-                              ✕
-                            </button>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={handleCancel}
+                                className="w-1/2 border rounded py-1 text-sm hover:bg-gray-100"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleAdSetNameUpdate(
+                                    adsset.adSetId,
+                                    editingName
+                                  )
+                                }
+                                className="w-1/2 bg-blue-500 text-white rounded py-1 text-sm hover:bg-blue-600"
+                              >
+                                Save
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2 group">
-                            <p className="truncate">{adsset.adSetName}</p>
+                            <p className="truncate max-w-[200px]">
+                              {adsset.adSetName}
+                            </p>
                             <Pen
                               size={14}
                               className="opacity-0 group-hover:opacity-100 cursor-pointer text-blue-500"
@@ -618,6 +771,8 @@ useEffect(() => {
               getAdLink={getAdLink}
               previewImage={previewImage}
               setPreviewImage={setPreviewImage}
+              adsSelectedBar={adsSelectedBar}
+              setAdsSelectedBar={setAdsSelectedBar}
             />
           )}
         </Table>

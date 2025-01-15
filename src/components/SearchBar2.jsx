@@ -119,7 +119,7 @@ const SearchBar2 = () => {
   }, [filters, setActiveFilters]);
 
   return (
-    <div className="w-full max-w-screen-sm mb-2 relative font-sans">
+    <div className="w-[600px] max-w-[800px]  relative font-sans">
       <div className="relative">
         <div className="flex items-start border border-gray-300 rounded-3xl bg-white">
           <div className="flex flex-wrap gap-2 p-2 w-full min-h-[30px]">

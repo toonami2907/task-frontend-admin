@@ -13,7 +13,7 @@ import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-} from "@/components/ui/resizable"
+} from "@/components/ui/resizable";
 import { Switch } from "./ui/switch";
 import { Checkbox } from "./ui/checkbox";
 import { Link, Pen } from "lucide-react";
@@ -26,6 +26,8 @@ const Ads = ({
   customColumn,
   adsData: initialAdsData,
   setPreviewImage,
+  setAdsSelectedBar,
+  adsSelectedBar,
   getAdLink,
 }) => {
   const [adsData, setAdsData] = useState(initialAdsData);
@@ -34,6 +36,13 @@ const Ads = ({
   const [selectAll, setSelectAll] = useState(false);
   const [editingAdId, setEditingAdId] = useState(null);
   const [editingName, setEditingName] = useState("");
+
+  useEffect(() => {
+    const selectedAdIds = Object.entries(selectedAds)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([adId]) => adId);
+    setAdsSelectedBar(selectedAdIds);
+  }, [selectedAds, setAdsSelectedBar]);
 
   const handleSelectAll = (checked) => {
     setSelectAll(checked);
@@ -50,7 +59,6 @@ const Ads = ({
       [adId]: checked,
     }));
 
-    // Update selectAll state based on whether all ads are selected
     const updatedSelected = {
       ...selectedAds,
       [adId]: checked,
@@ -86,7 +94,7 @@ const Ads = ({
           ad.adId === adId ? { ...ad, adName: newName } : ad
         )
       );
-      fetchAds()
+      fetchAds();
       setEditingAdId(null);
     } catch (error) {
       console.error("Failed to update ad name:", error);
@@ -193,7 +201,11 @@ const Ads = ({
               {adsData.map((ads, idx) => (
                 <TableRow
                   key={idx}
-                  className="group hover:bg-gray-50 transition-colors"
+                  className={`h-5 group transition-colors ${
+                    adsSelectedBar?.includes(ads.adId)
+                      ? "bg-green-100 hover:bg-green-50"
+                      : " hover:bg-gray-50 "
+                  }`}
                 >
                   <TableCell className="w-5 ">
                     <Checkbox
@@ -231,7 +243,7 @@ const Ads = ({
                         title={`Edit ${ads.adName}`}
                       >
                         {editingAdId === ads.adId ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-col space-y-2">
                             <input
                               type="text"
                               value={editingName}
@@ -244,19 +256,32 @@ const Ads = ({
                                   handleCancel();
                                 }
                               }}
-                              className="border rounded px-2 py-1 flex-1"
+                              className="border rounded px-2 py-1 w-full font-normal focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               autoFocus
+                              placeholder="Enter new ad name"
                             />
-                            <button
-                              onClick={handleCancel}
-                              className="text-gray-500 hover:text-red-500"
-                            >
-                              ✕
-                            </button>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={handleCancel}
+                                className="w-1/2 border rounded py-1 text-sm hover:bg-gray-100"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleNameUpdate(ads.adId, editingName)
+                                }
+                                className="w-1/2 bg-blue-500 text-white rounded py-1 text-sm hover:bg-blue-600"
+                              >
+                                Save
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
-                            {ads.adName}
+                            <p className="truncate max-w-[150px]">
+                              {ads.adName}
+                            </p>
                             <Pen
                               size={14}
                               className="opacity-0 group-hover:opacity-100 cursor-pointer text-blue-500"
@@ -286,11 +311,17 @@ const Ads = ({
                         case "Campaign ID":
                           return ads.campaignId;
                         case "Budget":
-                          return ads.dailyBudget ? formatCurrency(ads.dailyBudget) : "—"
+                          if (ads.objective === "OUTCOME_ENGAGEMENT") {
+                            return "Using campaign budget";
+                          }
+                          return ads.dailyBudget
+                            ? formatCurrency(ads.dailyBudget)
+                            : "—";
+
                         case "URL parameters":
                           return ads.creative?.urlTags;
                         case "Audience location (Ad set settings)":
-                          return 'NG';
+                          return "NG";
                         case "Objective":
                           return ads.objective?.substring(8).toLowerCase();
                         case "Meta Pixel": {
@@ -366,16 +397,17 @@ const Ads = ({
         </div>
         {previewImage && (
           <div
-            className="fixed left-48 top-1/4 bg-white shadow-lg rounded-lg p-4 max-h-[200px] overflow-y-auto h-full mx-4 border border-gray-200 w-[200px] z-10"
+            className="fixed left-48 top-1/4 bg-white shadow-lg rounded-lg p-4 max-h-[350px]  overflow-hidden h-full mx-4 border border-gray-200 w-full max-w-[350px] z-10"
             onMouseLeave={() => setPreviewImage(null)}
           >
-            <div className="space-y-4">
+            <div className="space-y-4 h-[300px]">
               <img
                 src={
-                  previewImage.creative && previewImage.creative.thumbnailUrl
+                  (previewImage.creative && previewImage.creative?.imageUrl) ||
+                  previewImage.creative?.thumbnailUrl
                 }
                 alt={previewImage.adName}
-                className="w-full h-[200px] object-contain bg-gray-50 rounded"
+                className="w-full h-[250px] object-cover object-center bg-gray-50 rounded"
               />
               <div className="space-y-2">
                 <h3 className="font-medium text-sm">{previewImage.adName}</h3>

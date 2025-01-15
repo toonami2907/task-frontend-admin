@@ -29,6 +29,30 @@ const AdsCalendarDialog = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [compare, setCompare] = React.useState(false);
   const [customRange, setCustomRange] = React.useState("custom");
+  const [dateRange, setDateRange] = React.useState({
+    startDate: new Date(),
+    endDate: new Date()
+  });
+  
+  // Add this effect to update dates automatically
+  React.useEffect(() => {
+    const updateDates = () => {
+      const newDates = calculateDateRange(selectedRange);
+      setDate(newDates);
+      setDateRange({
+        startDate: newDates.from,
+        endDate: newDates.to
+      });
+    };
+  
+    // Update immediately
+    updateDates();
+  
+    // Set up interval for daily updates
+    const interval = setInterval(updateDates, 86400000); // 24 hours
+  
+    return () => clearInterval(interval);
+  }, [selectedRange]);
 
   const timeRanges = [
     { label: "Today", value: "today" },

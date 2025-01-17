@@ -42,7 +42,10 @@ const AdsManager = ({
   const { state, customColumn, activeFilters, fetchAds } = useGlobalContext();
   const [originalData, setOriginalData] = useState([]);
   const [editingAdSetId, setEditingAdSetId] = useState(null);
+  const [campaignLoading, setCampaignLoading] = useState(false);
+  const [adsLoading, setAdsLoading] = useState(false);
   const [editingName, setEditingName] = useState("");
+  const [updatingSwitches, setUpdatingSwitches] = useState(new Set());
   const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [isCampaignFilterLoading, setIsCampaignFilterLoading] = useState(false);
   const [editingBudgetAdSetId, setEditingBudgetAdSetId] = useState(null);
@@ -504,6 +507,7 @@ const AdsManager = ({
       }
     }
   };
+
   const handleStateStatus = async (action) => {
     const statusMap = {
       Campaign: {
@@ -511,31 +515,44 @@ const AdsManager = ({
         endpoint: `${API_URL}/auth/pause/status/campaigns`,
         idField: "campaignIds",
         entityName: "Campaign",
+        idKey: "campaignId",
       },
       "Ads Set": {
         ids: selectedBar,
         endpoint: `${API_URL}/auth/pause/status/AdSets`,
         idField: "adSetIds",
         entityName: "Ads set",
+        idKey: "adSetId",
       },
       Ads: {
         ids: adsSelectedBar,
         endpoint: `${API_URL}/auth/pause/status/Ads`,
         idField: "adIds",
         entityName: "Ads",
+        idKey: "adId",
       },
     };
 
     const entityConfig = statusMap[state];
-    if (!entityConfig) return;
+    if (!entityConfig) {
+      setAdsLoading(!adsLoading)
+      return
+    };
+
+    if (entityConfig.entityName === "Ads") {
+      setAdsLoading(true);
+    }
 
     if (!entityConfig.ids?.length) {
       ErrorToast(`Please select ${entityConfig.entityName}(s) first`);
       return;
     }
 
+    console.log("action",action)
+    const status = action === "On" ? "ACTIVE" : "PAUSED";
+    setDisableState(action);
+
     try {
-      const status = action === "On" ? "ACTIVE" : "PAUSED";
       const payload = {
         status,
         [entityConfig.idField]: entityConfig.ids,
@@ -544,40 +561,45 @@ const AdsManager = ({
       const response = await axios.post(entityConfig.endpoint, payload);
 
       if (response.status === 200) {
+        fetchAds();
         toast.success(
           `${
             entityConfig.entityName
           } status changed to ${status.toLowerCase()} successfully`
         );
-        setDisableState("");
-        fetchAds();
+        if (entityConfig.entityName === "Ads") {
+          setAdsLoading(false);
+        }
       }
     } catch (error) {
+      // Revert the disable state on error
+      setDisableState(action === "On" ? "Off" : "On");
+
+      if (entityConfig.entityName === "Ads") {
+        setAdsLoading(false);
+      }
+
       toast.error(
         `Error changing ${entityConfig.entityName.toLowerCase()} status: ${
           error.message
         }`
       );
-      console.error(`Error while changing ${entityConfig.entityName}:`, error);
+    } finally {
+      // Clear the disable state after completion
+      setDisableState("");
     }
   };
 
-  //  if(state === 'Campaign'){
-  //      console.log('Campaign', SelectedCamapiagn)
-  //   } else if(state === 'Ads Set'){
-  //      console.log('Ads set ', selectedBar)
-  //   }else if (state === 'Ads'){
-  //     console.log('Ads', adsSelectedBar)
-  //   }
-
+  
   return (
     <div className="w-full py-4 bg-inherit px-0 font-sans">
       {/* Top Navigation */}
-      <div className="flex  items-center justify-between mb-2  px-5 pb-2">
+      <div className="flex  items-center justify-between mb-2 pr-5 pl-2 pb-2">
         <div className="flex items-center w-full gap-2">
           <SelectState
             state={disableState}
             setState={setDisableState}
+            disableState={setDisableState}
             handleStateStatus={handleStateStatus}
           />
           <SearchBar2 />
@@ -595,12 +617,14 @@ const AdsManager = ({
       ) : hasData(originalData) ? (
         <Table>
           {state === "Campaign" && (
-            <Campaign
-              fetchedData={originalData}
-              SetCamapiagn={SetCamapiagn}
-              SelectedCamapiagn={SelectedCamapiagn}
-              customColumn={customColumn}
-            />
+           <Campaign
+           fetchedData={originalData}
+           SetCamapiagn={SetCamapiagn}
+           SelectedCamapiagn={SelectedCamapiagn}
+           customColumn={customColumn}
+           isLoading={campaignLoading}
+           disableState={disableState} // Add this prop
+         />
           )}
           {state === "Ads Set" && (
             <>
@@ -624,9 +648,11 @@ const AdsManager = ({
                     />
                   </TableHead>
                   <TableHead className="w-20 p-2 select-none border-r">
-                    <div className="flex items-center">Off/On</div>
+                    <div className="flex text-xs font-bold items-center">
+                      Off/On
+                    </div>
                   </TableHead>
-                  <TableHead className="text-lg font-medium p-2 min-w-[60px] select-none border-r">
+                  <TableHead className="text-xs font-bold p-2 min-w-[60px] select-none border-r">
                     <div className="">Ad Sets</div>
                   </TableHead>
                   {getVisibleColumns().map((col, idx) => (
@@ -675,7 +701,12 @@ const AdsManager = ({
                     </TableCell>
                     <TableCell className="p-2 w-20 border-r">
                       <Switch
-                        checked={adsset.status === "ACTIVE"}
+                        checked={
+                          // Check if the item is being updated through bulk action
+                          updatingSwitches.has(adsset.adSetId)
+                            ? disableState === "On"
+                            : adsset.status === "ACTIVE"
+                        }
                         onCheckedChange={() =>
                           handleAdSetStatusChange(adsset.adSetId, adsset.status)
                         }
@@ -764,17 +795,20 @@ const AdsManager = ({
               </TableBody>
             </>
           )}
-          {state === "Ads" && (
-            <Ads
-              adsData={adsData}
-              customColumn={customColumn}
-              getAdLink={getAdLink}
-              previewImage={previewImage}
-              setPreviewImage={setPreviewImage}
-              adsSelectedBar={adsSelectedBar}
-              setAdsSelectedBar={setAdsSelectedBar}
-            />
-          )}
+          {state === "Ads" &&
+            ( 
+              <Ads
+                adsData={adsData}
+                customColumn={customColumn}
+                getAdLink={getAdLink}
+                previewImage={previewImage}
+                setPreviewImage={setPreviewImage}
+                adsSelectedBar={adsSelectedBar}
+                setAdsSelectedBar={setAdsSelectedBar}
+                isLoading={adsLoading}
+                disableState={disableState} // Add this prop
+              />
+            )}
         </Table>
       ) : (
         <div className="flex flex-col h-full items-center justify-center">

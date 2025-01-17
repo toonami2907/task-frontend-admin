@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+/* eslint-disable react/prop-types */
+import React, { useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Folder, LayoutDashboardIcon, Book, X } from "lucide-react";
 import { useGlobalContext } from "@/functions/features/StateProvider";
@@ -22,7 +23,7 @@ const MyTabs = ({ selectedBarLength, SelectedBarState,SelectedCamapiagnLength, S
         onValueChange={(value) => handleTabChange(value)}
         className="max-w-screen-md w-full "
       >
-        <TabsList className="w-full borderr grid grid-cols-3 bg-inherit p-0 gap-5 h-[150px]">
+        <TabsList className="w-full borderr grid grid-cols-3 bg-inherit p-0 gap-5 h-[120px]">
           <TabsTrigger
             className="flex items-start justify-between bg-gray-100 h-full border shadow-sm p-2"
             value="Campaign"

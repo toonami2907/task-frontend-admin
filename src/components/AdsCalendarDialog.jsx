@@ -171,7 +171,9 @@ const AdsCalendarDialog = () => {
             <Calendar
               mode="range"
               selected={date}
+              showPrevNextMonthButtons={true}
               onSelect={handleDateSelect}
+              defaultMonth={new Date(new Date().setMonth(new Date().getMonth() - 1))}
               numberOfMonths={2}
               className="rounded-md border flex justify-center items-center"
             />

@@ -24,7 +24,7 @@ const STATUS_COLORS = {
   PAUSED: "bg-gray-400",
 };
 
-const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn, SetCamapiagn }) => {
+const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn,disableState , SetCamapiagn }) => {
   const [campaignData, setCampaignData] = useState(fetchedData);
   const { activeFilters, fetchAds } = useGlobalContext();
   const [selectedItems, setSelectedItems] = useState(new Set());
@@ -78,9 +78,27 @@ const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn, SetCamapiagn 
       setSelectedItems(new Set());
       SetCamapiagn([])
     }
-  }, [campaignData]);
+  }, [campaignData, SelectedCamapiagn]);
+  // In Campaign component, add this effect to watch for status changes
+useEffect(() => {
+  if (disableState && SelectedCamapiagn?.length) {
+    const newStatus = disableState === "On" ? "ACTIVE" : "PAUSED";
+    
+    setCampaignData(prevData => 
+      prevData.map(campaign => 
+        SelectedCamapiagn.includes(campaign.campaignId)
+          ? { ...campaign, status: newStatus }
+          : campaign
+      )
+    );
+  }
+}, [disableState, SelectedCamapiagn]);
+
 
   const handleSelectItem = useCallback((campaignId, checked) => {
+    if(SelectedCamapiagn.length === 0){
+      return setSelectedItems([])
+    }
     setSelectedItems((prev) => {
       const newSet = new Set(prev);
       if (checked) {
@@ -90,7 +108,7 @@ const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn, SetCamapiagn 
       }
       return newSet;
     });
-  }, []);
+  }, [SelectedCamapiagn]);
 
 
 
@@ -170,8 +188,6 @@ const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn, SetCamapiagn 
   };
 
 
-
-
   
   const getValue = useCallback((campaign, col) => {
     switch (col) {
@@ -230,7 +246,12 @@ const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn, SetCamapiagn 
               <Loader className="w-4 h-4 animate-spin" />
             ) : (
               <Switch
-                checked={campaign.status === "ACTIVE"}
+                checked={
+                  SelectedCamapiagn.includes(campaign.campaignId) &&
+                  (disableState === "On" || disableState === "Off")
+                    ? disableState === "On"
+                    : campaign.status === "ACTIVE"
+                }
                 onCheckedChange={(checked) =>
                   handleSwitchToggle(
                     campaign.campaignId,
@@ -400,16 +421,16 @@ const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn, SetCamapiagn 
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50">
-              <TableHead className="w-12 select-none border-r">
+              <TableHead className="w-12 select-none">
                 <Checkbox
                   checked={campaignData.length > 0 && SelectedCamapiagn?.length === campaignData.length}
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead className="w-20 border-r">Status</TableHead>
-              <TableHead className="border-r min-w-[200px]">Campaign</TableHead>
+              <TableHead className="w-20 text-xs font-bold border-r">Status</TableHead>
+              <TableHead className="border-r  text-xs font-bold min-w-[200px]">Campaign</TableHead>
               {visibleColumns.map((col) => (
-                <TableHead key={col} className="border-r min-w-[120px]">
+                <TableHead key={col} className="border-r text-xs min-w-[120px]">
                   {col}
                 </TableHead>
               ))}
@@ -429,12 +450,12 @@ const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn, SetCamapiagn 
                   (col, idx) => (
                     <TableCell
                       key={`${campaign.campaignId}-${col}-${idx}`}
-                      className={`border-r ${
+                      className={` text-xs ${
                         col === "checkbox"
-                          ? "w-12"
+                          ? "w-12 "
                           : col === "status"
-                          ? "w-20"
-                          : "min-w-[120px]"
+                          ? "w-20 border-r"
+                          : "min-w-[120px] border-r"
                       }`}
                     >
                       {renderCell(campaign, col)}

@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { LinkPreview } from "@dhaiwat10/react-link-preview";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -20,6 +21,8 @@ import { Link, Pen } from "lucide-react";
 import NoAd from "./NoAd";
 import { API_URL, useGlobalContext } from "@/functions/features/StateProvider";
 import { formatCurrency } from "@/hooks/func";
+import toast from "react-hot-toast";
+import { ErrorToast } from "@/hooks/customToast";
 
 const Ads = ({
   previewImage,
@@ -29,6 +32,8 @@ const Ads = ({
   setAdsSelectedBar,
   adsSelectedBar,
   getAdLink,
+  // isLoading,
+  disableState, // Add this prop
 }) => {
   const [adsData, setAdsData] = useState(initialAdsData);
   const { activeFilters, fetchAds } = useGlobalContext();
@@ -36,6 +41,22 @@ const Ads = ({
   const [selectAll, setSelectAll] = useState(false);
   const [editingAdId, setEditingAdId] = useState(null);
   const [editingName, setEditingName] = useState("");
+
+  useEffect(() => {
+    if (adsSelectedBar.length > 0 && disableState) {
+      setAdsData((prevData) =>
+        prevData.map((item) => {
+          if (adsSelectedBar.includes(item.adId)) {
+            return {
+              ...item,
+              status: disableState === "On" ? "ACTIVE" : "PAUSED",
+            };
+          }
+          return item;
+        })
+      );
+    }
+  }, [adsSelectedBar, disableState]);
 
   useEffect(() => {
     const selectedAdIds = Object.entries(selectedAds)
@@ -160,6 +181,9 @@ const Ads = ({
     return pixelSpec?.fb_pixel || [];
   };
 
+  console.log("disableState ads", disableState);
+  console.log(" adsSelectedBar", adsSelectedBar);
+
   if (!adsData || adsData.length === 0) {
     return <NoAd />;
   }
@@ -167,20 +191,22 @@ const Ads = ({
   return (
     <div>
       <div className="relative flex">
-        <div className="flex-grow overflow-x-auto">
+        <div className="flex-grow overflow-x-auto w-full b">
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead className="w-5 select-none ">
+                <TableHead className="min-w-12 select-none ">
                   <Checkbox
                     checked={selectAll}
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
-                <TableHead className="w-20 select-none border-r">
-                  <div className="flex items-center">Off/On</div>
+                <TableHead className="min-w-20 select-none border-r">
+                  <div className="flex  text-xs font-bold items-center">
+                    Off/On
+                  </div>
                 </TableHead>
-                <TableHead className="text-lg font-medium min-w-[200px] select-none border-r">
+                <TableHead className="text-xs font-bold min-w-[200px] select-none border-r">
                   <div className=" overflow-hidden">Ads</div>
                 </TableHead>
                 {customColumn.map((col, idx) => (
@@ -217,13 +243,28 @@ const Ads = ({
                   </TableCell>
                   <TableCell className="w-20 border-r">
                     <Switch
-                      checked={ads.status === "ACTIVE"}
-                      onCheckedChange={(checked) =>
+                      checked={
+                        adsSelectedBar.includes(ads.adId) &&
+                        (disableState === "On" || disableState === "Off")
+                          ? disableState === "On"
+                          : ads.status === "ACTIVE"
+                      }
+                      onCheckedChange={(checked) => {
+                        if (
+                          (ads.status === "ACTIVE" && disableState === "On") ||
+                          (ads.status === "PAUSED" && disableState === "Off")
+                        ) {
+                          ErrorToast(
+                            `Ads status is ${disableState}, no change needed.`
+                          );
+                          return;
+                        }
+
                         handleStatusChange(
                           ads.adId,
                           checked ? "ACTIVE" : "PAUSED"
-                        )
-                      }
+                        );
+                      }}
                     />
                   </TableCell>
                   <TableCell className="max-w-[300px] border-r">
@@ -408,6 +449,11 @@ const Ads = ({
                 }
                 alt={previewImage.adName}
                 className="w-full h-[250px] object-cover object-center bg-gray-50 rounded"
+                style={{
+                  imageRendering: "auto", // Helps with pixelated images
+                  maxHeight: "100%",
+                  maxWidth: "100%",
+                }}
               />
               <div className="space-y-2">
                 <h3 className="font-medium text-sm">{previewImage.adName}</h3>

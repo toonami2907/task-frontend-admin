@@ -7,8 +7,7 @@ import { useGlobalContext } from "@/functions/features/StateProvider";
 const App = () => {
   const [barData, setBarData] = useState([]);
   const [campaignSelect, setCampaignSelect] = useState([]);
-  const [loading, setLoading] = useState(false)
-  const {fetchAds} = useGlobalContext()
+  const {fetchAds,loading, setLoading} = useGlobalContext()
   
   useEffect(() => {
 
@@ -50,7 +49,7 @@ const Reload = ()=>{
           SelectedCamapiagn={setCampaignSelect}
           SelectedCamapiagnLength={campaignSelect.length}
         />
-        <div className="absolute top-14 w-full z-20 bg-white">
+        <div className="absolute top-12 w-full z-20 bg-white">
           <AdsManager selectedBar={barData} setSelectedBar={setBarData}   SetCamapiagn={setCampaignSelect}  SelectedCamapiagn={campaignSelect} />
         </div>
       </div>

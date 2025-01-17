@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import {
   Select,
   SelectContent,
@@ -6,18 +7,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const SelectState = ({ state, setState, handleStateStatus }) => {
+const SelectState = ({ state, setState, handleStateStatus, disableState }) => {
   return (
     <Select
       value={state}
       onValueChange={(value) => {
         handleStateStatus(value);
-        setState('')
+        disableState(value)
       }}
       className=""
     >
-      <SelectTrigger className="w-[180px] h-[40px]">
-        <SelectValue placeholder="Edit" />
+      <SelectTrigger className="w-[120px] h-[40px]">
+        <SelectValue placeholder="Off/On" />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="On">On</SelectItem>

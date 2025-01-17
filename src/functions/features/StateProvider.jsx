@@ -35,7 +35,7 @@ export default function StateProvider({ children }) {
   const [selectedBarData, setSelectedBarData] = useState(0);
   const [selectedPresets, setSelectedPresets] = useState("Setup");
   const [activeFilters, setActiveFilters] = useState([]);
-
+  const [loading, setLoading] = useState(false)
   const [customColumn, setCustomColumn] = useState()
 
 useEffect(()=>{
@@ -54,9 +54,12 @@ useEffect(()=>{
 
   }, [activeFilters])
   const fetchAds = async()=>{
+    setLoading((prev)=> !prev)
     try {
      await axios.get(`${API_URL}/auth/ads`)
+     setLoading((prev)=> !prev)
     } catch (error) {
+      setLoading((prev)=> !prev)
       console.error('error fetching ads', error.message)
     }
   }
@@ -68,7 +71,7 @@ useEffect(()=>{
 
   }, [selectedBar, setSelectedBar])
   return (
-    <StateContext.Provider value={{ state, setState, setCustomColumn, customColumn, selectedPresets,fetchAds,setActiveFilters,activeFilters,  setSelectedPresets, setSelectedBar,selectedBarData,setSelectedBarData, selectedBar}}>
+    <StateContext.Provider value={{ state, setState, setCustomColumn,setLoading, loading, customColumn, selectedPresets,fetchAds,setActiveFilters,activeFilters,  setSelectedPresets, setSelectedBar,selectedBarData,setSelectedBarData, selectedBar}}>
       {children}
     </StateContext.Provider>
   );

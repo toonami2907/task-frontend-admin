@@ -10,8 +10,10 @@ const FacebookCallback = () => {
     const handleCallback = async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get("code");
+      const state = urlParams.get("state");
       const error = urlParams.get("error");
         console.log('code', code)
+        console.log('state', state)
       if (error) {
         console.error("Facebook login error:", error);
         // navigate("/error?message=Facebook login failed.");
@@ -22,6 +24,7 @@ const FacebookCallback = () => {
         try {
           const response = await axios.post(`${API_URL}/auth/fb/callback`, {
             code,
+            state
           });
 
           console.log("Successfully authenticated:", response.data);

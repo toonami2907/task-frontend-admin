@@ -33,9 +33,7 @@ const Reload = ()=>{
 
   return (
     <div className="">
-      
-      {/* <div className="my-5"></div> */}
-      <div className=" relative my-10 bg-inherit min-w-screen w-full">
+      <div className="relative my-10 bg-inherit min-w-screen w-full">
       {/* <div className="w-full pr-5 justify-end absolute top-0 items-end flex"> */}
         <TimestampWithReload
           timestamp={new Date()}

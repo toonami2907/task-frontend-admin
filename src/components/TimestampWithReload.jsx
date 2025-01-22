@@ -22,7 +22,7 @@ const TimestampWithReload = ({ timestamp, onReload, isLoading }) => {
   };
 
   return (
-    <div className="flex items-center absolute right-5 gap-3 text-gray-700 text-md">
+    <div className="lg:flex hidden items-center absolute right-5 gap-3 text-gray-700 text-md">
       <h1>{getUpdateText(timestamp)}</h1>
       <button
         onClick={onReload}

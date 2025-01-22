@@ -45,12 +45,12 @@ export const SetUp = [
     "Last significant edit",
     "Attribution setting",
     "Results",
+    "Correct Purchases",
     "Reach",
     "Impressions",
     "Cost per result",
     "Quality ranking",
     "Engagement rate ranking",
-    "Conversion rate ranking",
     "Amount spent",
     "Ends",
     "Schedule"

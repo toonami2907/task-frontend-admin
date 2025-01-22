@@ -61,8 +61,11 @@ li{
 
 
 @layer components {
+  .text-color{
+    @apply text-black
+  }
   body{
-    @apply text-sm font-sans text-gray-700;
+    @apply text-sm font-sans text-color;
   }
 
   .defaut_head_style{

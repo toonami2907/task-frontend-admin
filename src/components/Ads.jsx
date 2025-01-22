@@ -41,6 +41,7 @@ const Ads = ({
   const [selectAll, setSelectAll] = useState(false);
   const [editingAdId, setEditingAdId] = useState(null);
   const [editingName, setEditingName] = useState("");
+  console.log("data", initialAdsData)
 
   useEffect(() => {
     if (adsSelectedBar.length > 0 && disableState) {
@@ -202,12 +203,12 @@ const Ads = ({
                   />
                 </TableHead>
                 <TableHead className="min-w-20 select-none border-r">
-                  <div className="flex  text-xs font-bold items-center">
-                    Off/On
+                  <div className="flex text-color text-xs font-bold items-center">
+                   status
                   </div>
                 </TableHead>
                 <TableHead className="text-xs font-bold min-w-[200px] select-none border-r">
-                  <div className=" overflow-hidden">Ads</div>
+                  <div className="text-color overflow-hidden">Ads</div>
                 </TableHead>
                 {customColumn.map((col, idx) => (
                   <TableHead
@@ -216,7 +217,7 @@ const Ads = ({
                       idx !== customColumn.length - 1 ? "border-r" : ""
                     }`}
                   >
-                    <div className="resize-x overflow-hidden min-w-[120px]">
+                    <div className="resize-x text-color overflow-hidden min-w-[120px]">
                       {col}
                     </div>
                   </TableHead>
@@ -351,6 +352,8 @@ const Ads = ({
                           return ads.adSetId;
                         case "Campaign ID":
                           return ads.campaignId;
+                        case "Correct Purchases":
+                          return ads.matchedOrders ? ads.matchedOrders.length : 0;
                         case "Budget":
                           if (ads.objective === "OUTCOME_ENGAGEMENT") {
                             return "Using campaign budget";

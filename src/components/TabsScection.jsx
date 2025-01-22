@@ -29,12 +29,12 @@ const MyTabs = ({ selectedBarLength, SelectedBarState,SelectedCamapiagnLength, S
             value="Campaign"
           >
             <h1 className="flex items-center gap-2 font-medium">
-              <Folder />
+              <Folder className="w-4 h-4 md:w-full md:h-full"/>
               Campaign
             </h1>
             {SelectedCamapiagnLength > 0 && (
-              <div className="bg-blue-600 rounded-lg flex items-center gap-2 text-xs p-2 text-white">
-                <span> {SelectedCamapiagnLength} selected</span> <span onClick={()=>{
+              <div className="bg-blue-600 rounded-lg  hidden md:flex items-center gap-2 text-xs p-2 text-white">
+                <span > {SelectedCamapiagnLength} selected</span> <span onClick={()=>{
                   SelectedCamapiagn([])
                 }}><X size={20} /></span>
               </div>
@@ -46,12 +46,12 @@ const MyTabs = ({ selectedBarLength, SelectedBarState,SelectedCamapiagnLength, S
           >
             {" "}
             <h1 className="flex items-center font-medium gap-2">
-              <LayoutDashboardIcon />
+              <LayoutDashboardIcon className="w-4 h-4 md:w-full md:h-full"/>
               Ads set
             </h1>
             {selectedBarLength > 0 && (
-              <div className="bg-blue-600 rounded-lg flex items-center gap-2 text-xs p-2 text-white">
-                <span> {selectedBarLength} selected</span> <span onClick={()=>{
+              <div className="bg-blue-600 rounded-lg  hidden md:flex items-center gap-2 text-xs p-2 text-white">
+                <span  className=""> {selectedBarLength} selected</span> <span onClick={()=>{
                   SelectedBarState([])
                 }}><X size={20} /></span>
               </div>
@@ -62,7 +62,7 @@ const MyTabs = ({ selectedBarLength, SelectedBarState,SelectedCamapiagnLength, S
             value="Ads"
           >
             <h1 className="flex items-center font-medium gap-2">
-              <Book />
+              <Book className="w-4 h-4 md:w-full md:h-full"/>
 
               {selectedBarLength > 0 ? <span className="font-semibold text-lg">Ads for {selectedBarLength} Ads sets</span> :  'Ads'}
              {" "}

@@ -88,11 +88,18 @@ const SearchBar2 = () => {
   }, [selectedFilter, tempFilter]);
 
   const FilterCard = ({ filter, index, onRemove }) => (
-    <div className={`${filter.length >= 4 ? 'text-xs py-0' : ' px-2 py-1'} flex items-center gap-2 bg-gray-200 text-gray-700 rounded`}>
-      <span className={`${filter.length >= 4 ? 'text-xs' : 'text-sm'}`}>
+    <div className={`
+      flex items-center gap-1 sm:gap-2 
+      bg-gray-200 text-gray-700 rounded
+      ${filter.length >= 4 ? 'text-[10px] sm:text-xs py-0.5' : 'px-1.5 sm:px-2 py-1'}
+      transition-all duration-200 ease-in-out
+      hover:bg-gray-300
+      max-w-[200px] sm:max-w-none
+    `}>
+      <span className={`${filter.length >= 4 ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm'} truncate`}>
         {filter.label}{" "}
         <span 
-          className="text-black font-medium cursor-pointer text-xs hover:text-blue-600"
+          className="text-black font-medium cursor-pointer text-[10px] sm:text-xs hover:text-blue-600 truncate"
           onClick={() => handleEditFilter(filter, index)}
         >
           {filter.condition} {filter.value}
@@ -103,9 +110,9 @@ const SearchBar2 = () => {
           e.stopPropagation();
           onRemove(index);
         }}
-        className="hover:bg-blue-100 rounded"
+        className="hover:bg-blue-100 rounded p-0.5"
       >
-        <X className="h-4 w-4" />
+        <X className="h-3 w-3 sm:h-4 sm:w-4" />
       </button>
     </div>
   );
@@ -119,10 +126,11 @@ const SearchBar2 = () => {
   }, [filters, setActiveFilters]);
 
   return (
-    <div className="w-[670px] max-w-[800px]  relative font-sans">
-      <div className="relative">
-        <div className="flex items-start border border-gray-300 rounded-3xl bg-white">
-          <div className="flex flex-wrap gap-2 p-2 w-full min-h-[30px]">
+    <div className="w-full max-w-[300px] xs:max-w-[470px] lg:max-w-[800px] relative font-sans">
+    <div className="relative">
+      <div className="flex items-start border border-gray-300 rounded-2xl sm:rounded-3xl bg-white">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 p-1.5 sm:p-2 w-full min-h-[30px] overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2 max-w-full">
             {filters.slice(0, MAX_VISIBLE_FILTERS).map((filter, index) => (
               <FilterCard
                 key={filter.id}
@@ -131,27 +139,30 @@ const SearchBar2 = () => {
                 onRemove={handleRemoveFilter}
               />
             ))}
-            
-            {/* Show "Add filter" button only when at max filters */}
-            {isAtMaxFilters && (
-              <Button
-                variant="ghost"
-                className="h-7 px-2 text-sm text-blue-600"
-                onClick={() => setFilterDialogOpen(true)}
-              >
-                {filters.length > MAX_VISIBLE_FILTERS ? (
-                  <>View more ({filters.length - MAX_VISIBLE_FILTERS}) <ChevronRight className="h-4 w-4 ml-1" /></>
-                ) : (
-                  "Add filter"
-                )}
-              </Button>
-            )}
+              
+              {isAtMaxFilters && (
+                <Button
+                  variant="ghost"
+                  className="h-6 sm:h-7 px-1.5 sm:px-2 text-xs sm:text-sm text-blue-600 shrink-0"
+                  onClick={() => setFilterDialogOpen(true)}
+                >
+                  {filters.length > MAX_VISIBLE_FILTERS ? (
+                    <span className="flex items-center">
+                      View more ({filters.length - MAX_VISIBLE_FILTERS})
+                      <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
+                    </span>
+                  ) : (
+                    "Add filter"
+                  )}
+                </Button>
+              )}
+            </div>
 
             {!isAtMaxFilters && (
-              <div className="flex items-center flex-1 min-w-[200px]">
+              <div className="flex items-center min-w-[80px] xs:min-w-[120px] sm:min-w-[200px] flex-1">
                 <input
                   type="text"
-                  className="w-[200px] px-2 py-1.5  bg-transparent rounded-3xl border-none focus:ring-0 text-xs"
+                  className="w-full px-1.5 sm:px-2 py-1 sm:py-1.5 bg-transparent rounded-2xl sm:rounded-3xl border-none focus:ring-0 text-[10px] sm:text-xs"
                   placeholder="Search by name, ID, metric"
                   value={query}
                   onChange={(e) => {
@@ -164,19 +175,18 @@ const SearchBar2 = () => {
           </div>
         </div>
 
-        {/* Show suggestions dropdown only when not in dialog and not at max filters */}
         {showSuggestions && query && !filterDialogOpen && !isAtMaxFilters && (
           <Card className="absolute w-full border border-gray-300 border-t-0 rounded-t-none rounded-b-lg shadow-lg z-50 bg-white">
-            <div className="p-3 text-sm text-gray-500">Suggested searches</div>
-            <div className="divide-y">
+            <div className="p-2 sm:p-3 text-xs sm:text-sm text-gray-500">Suggested searches</div>
+            <div className="divide-y max-h-[250px] sm:max-h-[300px] overflow-y-auto">
               {searchCategories.map((category) => (
                 <div
                   key={category.field}
-                  className="px-3 py-2 hover:bg-gray-50 flex gap-5 items-center cursor-pointer"
+                  className="px-2 sm:px-3 py-1.5 sm:py-2 hover:bg-gray-50 flex gap-3 sm:gap-5 items-center cursor-pointer"
                   onClick={() => handleAddFilter(category)}
                 >
-                  <div className="text-xs">{category.label}</div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-[10px] sm:text-xs truncate">{category.label}</div>
+                  <div className="text-[10px] sm:text-xs text-gray-500 truncate">
                     contains <span className="text-blue-600">{query}</span>
                   </div>
                 </div>
@@ -188,8 +198,8 @@ const SearchBar2 = () => {
 
       {/* Dialog components remain unchanged */}
       <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogTitle>View All Filters</DialogTitle>
+        <DialogContent className="max-w-[90vw] sm:max-w-2xl m-4">
+          <DialogTitle className="text-base sm:text-lg">View All Filters</DialogTitle>
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
               {filters.map((filter, index) => (
@@ -236,8 +246,8 @@ const SearchBar2 = () => {
       </Dialog>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogTitle>Edit Filter</DialogTitle>
+        <DialogContent className="max-w-[90vw] sm:max-w-md m-4">
+          <DialogTitle className="text-base sm:text-lg">Edit Filter</DialogTitle>
           <div className="space-y-4">
             <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-600">
               {tempFilter.label}

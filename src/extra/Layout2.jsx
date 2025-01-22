@@ -21,28 +21,18 @@ function Layout() {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      {/* <AppSidebar /> */}
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center pr-4 justify-between w-full gap-2 border-b">
+        {/* <header className="flex h-16 shrink-0 items-center pr-4 justify-between w-full gap-2 border-b">
           <div className="flex items-center j gap-2 px-3">
             <SidebarTrigger />
             <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumb>
               <BreadcrumbList>
-                {/* <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="#">
-                    Building Your Application
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-                </BreadcrumbItem> */}
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-            {/* <ConnectAcc/> */}
-        </header>
+        </header> */}
         <div className='pl-5 bg-slate-100 h-screen'>
          <Outlet/>
         </div>

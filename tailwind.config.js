@@ -52,10 +52,14 @@ export default {
 		  lg: 'var(--radius)',
 		  md: 'calc(var(--radius) - 2px)',
 		  sm: 'calc(var(--radius) - 4px)',
+		  
 		},
 		fontSize: {
 		  md: '1rem',
 		},
+		screens: {
+			'xs': '475px',
+		  },
 	  },
 	},
   };

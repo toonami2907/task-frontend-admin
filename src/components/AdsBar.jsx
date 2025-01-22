@@ -9,7 +9,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ErrorToast } from "@/hooks/customToast";
-import { API_URL, useGlobalContext } from "@/functions/features/StateProvider";
+import {
+  API_URL,
+  useGlobalContext,
+} from "@/functions/features/StateProvider";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import toast from "react-hot-toast";
@@ -39,7 +42,8 @@ const AdsManager = ({
   const [selectedAds, setSelectedAds] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { state, customColumn, activeFilters, fetchAds } = useGlobalContext();
+  const { state, customColumn, activeFilters, fetchAds } =
+    useGlobalContext();
   const [originalData, setOriginalData] = useState([]);
   const [editingAdSetId, setEditingAdSetId] = useState(null);
   const [campaignLoading, setCampaignLoading] = useState(false);
@@ -47,8 +51,10 @@ const AdsManager = ({
   const [editingName, setEditingName] = useState("");
   const [updatingSwitches, setUpdatingSwitches] = useState(new Set());
   const [isFilterLoading, setIsFilterLoading] = useState(false);
-  const [isCampaignFilterLoading, setIsCampaignFilterLoading] = useState(false);
-  const [editingBudgetAdSetId, setEditingBudgetAdSetId] = useState(null);
+  const [isCampaignFilterLoading, setIsCampaignFilterLoading] =
+    useState(false);
+  const [editingBudgetAdSetId, setEditingBudgetAdSetId] =
+    useState(null);
   const [disableState, setDisableState] = useState("");
   const [adsSelectedBar, setAdsSelectedBar] = useState([]);
 
@@ -81,7 +87,9 @@ const AdsManager = ({
             endpoint = `${API_URL}/auth/db/campaigns`;
             break;
         }
-        const response = await axios.get(endpoint, { withCredentials: true });
+        const response = await axios.get(endpoint, {
+          withCredentials: true,
+        });
         setOriginalData(response.data);
         setFetchData(response.data);
       } catch (error) {
@@ -100,15 +108,20 @@ const AdsManager = ({
 
   const handleAdSetNameUpdate = async (adSetId, newName) => {
     try {
-      const response = await axios.post(`${API_URL}/auth/update/ads_set`, {
-        adSetId,
-        newName,
-      });
+      const response = await axios.post(
+        `${API_URL}/auth/update/ads_set`,
+        {
+          adSetId,
+          newName,
+        }
+      );
 
       if (response.status === 200) {
         setFetchData((prevData) =>
           prevData.map((adset) =>
-            adset.adSetId === adSetId ? { ...adset, adSetName: newName } : adset
+            adset.adSetId === adSetId
+              ? { ...adset, adSetName: newName }
+              : adset
           )
         );
         toast.success("Ad Set name updated successfully", {
@@ -126,7 +139,8 @@ const AdsManager = ({
     }
   };
   const handleAdSetStatusChange = async (adSetId, currentStatus) => {
-    const newStatus = currentStatus === "ACTIVE" ? "PAUSED" : "ACTIVE";
+    const newStatus =
+      currentStatus === "ACTIVE" ? "PAUSED" : "ACTIVE";
 
     try {
       const endpoint = `${API_URL}/auth/pause/Adset/${adSetId}`;
@@ -138,21 +152,29 @@ const AdsManager = ({
 
       setFetchData((prevData) =>
         prevData.map((adSet) =>
-          adSet.adSetId === adSetId ? { ...adSet, status: newStatus } : adSet
+          adSet.adSetId === adSetId
+            ? { ...adSet, status: newStatus }
+            : adSet
         )
       );
 
-      toast.success(`Ad Set ${newStatus.toLowerCase()} successfully`, {
-        position: "bottom-right",
-        duration: 3000,
-      });
+      toast.success(
+        `Ad Set ${newStatus.toLowerCase()} successfully`,
+        {
+          position: "bottom-right",
+          duration: 3000,
+        }
+      );
 
       fetchAds();
     } catch (error) {
-      toast.error(`Failed to update Ad Set status: ${error.message}`, {
-        position: "bottom-right",
-        duration: 3000,
-      });
+      toast.error(
+        `Failed to update Ad Set status: ${error.message}`,
+        {
+          position: "bottom-right",
+          duration: 3000,
+        }
+      );
     }
   };
 
@@ -173,9 +195,12 @@ const AdsManager = ({
 
   const fetchAdsSetById = async (adSetId) => {
     try {
-      const response = await axios.get(`${API_URL}/auth/adsset/${adSetId}`, {
-        withCredentials: true,
-      });
+      const response = await axios.get(
+        `${API_URL}/auth/adsset/${adSetId}`,
+        {
+          withCredentials: true,
+        }
+      );
       return response.data;
     } catch (error) {
       console.log(error.message);
@@ -220,9 +245,12 @@ const AdsManager = ({
 
   const FetchAdsById = async (adId) => {
     try {
-      const response = await axios.get(`${API_URL}/auth/ads/${adId}`, {
-        withCredentials: true,
-      });
+      const response = await axios.get(
+        `${API_URL}/auth/ads/${adId}`,
+        {
+          withCredentials: true,
+        }
+      );
       return response.data;
     } catch (error) {
       console.log(error.message);
@@ -253,7 +281,9 @@ const AdsManager = ({
                 const adId = typeof ad === "object" ? ad.adId : ad;
                 const adData = await FetchAdsById(adId);
                 // Parse the JSON if it's a string
-                return typeof adData === "string" ? JSON.parse(adData) : adData;
+                return typeof adData === "string"
+                  ? JSON.parse(adData)
+                  : adData;
               })
             );
 
@@ -303,8 +333,12 @@ const AdsManager = ({
       if (adsetFilters.length) {
         currentData = currentData.filter((adsset) => {
           return adsetFilters.every((rule) => {
-            const adsetName = (adsset.adSetName || "").trim().toLowerCase();
-            const searchValue = (rule.value || "").trim().toLowerCase();
+            const adsetName = (adsset.adSetName || "")
+              .trim()
+              .toLowerCase();
+            const searchValue = (rule.value || "")
+              .trim()
+              .toLowerCase();
 
             if (!searchValue) return true;
 
@@ -380,7 +414,9 @@ const AdsManager = ({
         "CPC (cost per link click)",
       ];
 
-      return customColumn.filter((col) => allowedColumns.includes(col));
+      return customColumn.filter((col) =>
+        allowedColumns.includes(col)
+      );
     }
 
     // Return all columns for other views (like Ads view)
@@ -439,7 +475,7 @@ const AdsManager = ({
               {!(
                 adsset.campaignObjective === "OUTCOME_TRAFFIC" ||
                 adsset.campaignObjective === "OUTCOME_ENGAGEMENT"
-              ) && <span className="text-gray-500">Daily</span>}
+              ) && <span className="text-color">Daily</span>}
             </div>
 
             {!(
@@ -535,9 +571,9 @@ const AdsManager = ({
 
     const entityConfig = statusMap[state];
     if (!entityConfig) {
-      setAdsLoading(!adsLoading)
-      return
-    };
+      setAdsLoading(!adsLoading);
+      return;
+    }
 
     if (entityConfig.entityName === "Ads") {
       setAdsLoading(true);
@@ -548,7 +584,7 @@ const AdsManager = ({
       return;
     }
 
-    console.log("action",action)
+    console.log("action", action);
     const status = action === "On" ? "ACTIVE" : "PAUSED";
     setDisableState(action);
 
@@ -558,7 +594,10 @@ const AdsManager = ({
         [entityConfig.idField]: entityConfig.ids,
       };
 
-      const response = await axios.post(entityConfig.endpoint, payload);
+      const response = await axios.post(
+        entityConfig.endpoint,
+        payload
+      );
 
       if (response.status === 200) {
         fetchAds();
@@ -590,41 +629,44 @@ const AdsManager = ({
     }
   };
 
-  
   return (
     <div className="w-full py-4 bg-inherit px-0 font-sans">
-      {/* Top Navigation */}
-      <div className="flex  items-center justify-between mb-2 pr-5 pl-2 pb-2">
-        <div className="flex items-center w-full gap-2">
-          <SelectState
-            state={disableState}
-            setState={setDisableState}
-            disableState={setDisableState}
-            handleStateStatus={handleStateStatus}
-          />
+         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-2">
+      {/* Left section */}
+      <div className="flex items-center gap-2 min-w-0">
+        <SelectState
+          state={disableState}
+          setState={setDisableState}
+          disableState={setDisableState}
+          handleStateStatus={handleStateStatus}
+        />
+        <div className="max-w-[200px] sm:max-w-none">
           <SearchBar2 />
         </div>
-        <div className="flex items-center justify-end gap-2 w-full">
-          <AdsCalendarDialog />
-          <StyledDropdown />
-          <DeliveryBar />
-        </div>
       </div>
+      
+      {/* Right section */}
+      <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
+        <AdsCalendarDialog />
+        <StyledDropdown />
+        <DeliveryBar />
+      </div>
+    </div>
 
       {/* Table View with Loading State */}
       {isLoading ? (
         <LoadingSpinner />
       ) : hasData(originalData) ? (
-        <Table>
+        <Table className="min-w-[1000px]">
           {state === "Campaign" && (
-           <Campaign
-           fetchedData={originalData}
-           SetCamapiagn={SetCamapiagn}
-           SelectedCamapiagn={SelectedCamapiagn}
-           customColumn={customColumn}
-           isLoading={campaignLoading}
-           disableState={disableState} // Add this prop
-         />
+            <Campaign
+              fetchedData={originalData}
+              SetCamapiagn={SetCamapiagn}
+              SelectedCamapiagn={SelectedCamapiagn}
+              customColumn={customColumn}
+              isLoading={campaignLoading}
+              disableState={disableState} // Add this prop
+            />
           )}
           {state === "Ads Set" && (
             <>
@@ -639,7 +681,9 @@ const AdsManager = ({
                       onCheckedChange={(checked) => {
                         if (checked) {
                           setSelectedBar(
-                            fetchedData.map((adsset) => adsset.adSetId)
+                            fetchedData.map(
+                              (adsset) => adsset.adSetId
+                            )
                           );
                         } else {
                           setSelectedBar([]);
@@ -649,20 +693,22 @@ const AdsManager = ({
                   </TableHead>
                   <TableHead className="w-20 p-2 select-none border-r">
                     <div className="flex text-xs font-bold items-center">
-                      Off/On
+                      status
                     </div>
                   </TableHead>
                   <TableHead className="text-xs font-bold p-2 min-w-[60px] select-none border-r">
-                    <div className="">Ad Sets</div>
+                    <div className="text-color">Ad Sets</div>
                   </TableHead>
                   {getVisibleColumns().map((col, idx) => (
                     <TableHead
                       key={idx}
                       className={`font-bold text-xs select-none ${
-                        idx !== getVisibleColumns().length - 1 ? "border-r" : ""
+                        idx !== getVisibleColumns().length - 1
+                          ? "border-r"
+                          : ""
                       }`}
                     >
-                      <div className="resize-x overflow-hidden min-w-[120px]">
+                      <div className="resize-x text-color overflow-hidden min-w-[120px]">
                         {col}
                       </div>
                     </TableHead>
@@ -683,7 +729,10 @@ const AdsManager = ({
                   >
                     <TableCell className="p-2 w-12 ">
                       <Checkbox
-                        checked={selectedBar?.includes(adsset.adSetId) || false}
+                        checked={
+                          selectedBar?.includes(adsset.adSetId) ||
+                          false
+                        }
                         onCheckedChange={() => {
                           setSelectedBar((prev) => {
                             const exists = prev?.some(
@@ -708,7 +757,10 @@ const AdsManager = ({
                             : adsset.status === "ACTIVE"
                         }
                         onCheckedChange={() =>
-                          handleAdSetStatusChange(adsset.adSetId, adsset.status)
+                          handleAdSetStatusChange(
+                            adsset.adSetId,
+                            adsset.status
+                          )
                         }
                       />
                     </TableCell>
@@ -719,7 +771,9 @@ const AdsManager = ({
                             <input
                               type="text"
                               value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
+                              onChange={(e) =>
+                                setEditingName(e.target.value)
+                              }
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                   handleAdSetNameUpdate(
@@ -787,7 +841,9 @@ const AdsManager = ({
                             : ""
                         }`}
                       >
-                        <div className="truncate">{getValue(adsset, col)}</div>
+                        <div className="truncate">
+                          {getValue(adsset, col)}
+                        </div>
                       </TableCell>
                     ))}
                   </TableRow>
@@ -795,20 +851,19 @@ const AdsManager = ({
               </TableBody>
             </>
           )}
-          {state === "Ads" &&
-            ( 
-              <Ads
-                adsData={adsData}
-                customColumn={customColumn}
-                getAdLink={getAdLink}
-                previewImage={previewImage}
-                setPreviewImage={setPreviewImage}
-                adsSelectedBar={adsSelectedBar}
-                setAdsSelectedBar={setAdsSelectedBar}
-                isLoading={adsLoading}
-                disableState={disableState} // Add this prop
-              />
-            )}
+          {state === "Ads" && (
+            <Ads
+              adsData={adsData}
+              customColumn={customColumn}
+              getAdLink={getAdLink}
+              previewImage={previewImage}
+              setPreviewImage={setPreviewImage}
+              adsSelectedBar={adsSelectedBar}
+              setAdsSelectedBar={setAdsSelectedBar}
+              isLoading={adsLoading}
+              disableState={disableState} // Add this prop
+            />
+          )}
         </Table>
       ) : (
         <div className="flex flex-col h-full items-center justify-center">

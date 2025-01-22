@@ -149,43 +149,61 @@ const AdsCalendarDialog = () => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2">
-          <Calendar1 />{" "}
-          {date.from.toLocaleDateString("en-US", options)} -{" "}
-          {date.to.toLocaleDateString("en-US", options)}
+        <Button variant="outline" className="flex items-center gap-2 text-xs sm:text-sm">
+          <Calendar1 className="h-4 w-4" />
+          <span className="hidden sm:inline">
+            {date.from.toLocaleDateString("en-US", options)} -{" "}
+            {date.to.toLocaleDateString("en-US", options)}
+          </span>
+          <span className="sm:hidden">
+            {date.from.toLocaleDateString("en-US", { month: "short", day: "numeric" })} -{" "}
+            {date.to.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          </span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl">
-        <div className="grid grid-cols-[200px_1fr] gap-4">
-          <div className="space-y-2">
-            <RadioGroup value={selectedRange} onValueChange={handleRangeChange}>
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl p-4 sm:p-6">
+        <div className="flex flex-col sm:grid sm:grid-cols-[200px_1fr] gap-4">
+          {/* Time range selector */}
+          <div className="order-2 sm:order-1 space-y-2 border-t sm:border-t-0 pt-4 sm:pt-0">
+            <RadioGroup 
+              value={selectedRange} 
+              onValueChange={handleRangeChange}
+              className="grid grid-cols-2 sm:grid-cols-1 gap-2"
+            >
               {timeRanges.map((range) => (
                 <div key={range.value} className="flex items-center space-x-2">
                   <RadioGroupItem value={range.value} id={range.value} />
-                  <Label htmlFor={range.value}>{range.label}</Label>
+                  <Label htmlFor={range.value} className="text-sm">
+                    {range.label}
+                  </Label>
                 </div>
               ))}
             </RadioGroup>
           </div>
-          <div className="space-y-4">
-            <Calendar
-              mode="range"
-              selected={date}
-              showPrevNextMonthButtons={true}
-              onSelect={handleDateSelect}
-              defaultMonth={new Date(new Date().setMonth(new Date().getMonth() - 1))}
-              numberOfMonths={2}
-              className="rounded-md border flex justify-center items-center"
-            />
+
+          {/* Calendar section */}
+          <div className="order-1 sm:order-2 space-y-4">
+            <div className="overflow-x-auto">
+              <Calendar
+                mode="range"
+                selected={date}
+                showPrevNextMonthButtons={true}
+                onSelect={handleDateSelect}
+                defaultMonth={new Date(new Date().setMonth(new Date().getMonth() - 1))}
+                numberOfMonths={window.innerWidth < 640 ? 1 : 2}
+                className="rounded-md border flex justify-center items-center min-w-[300px]"
+              />
+            </div>
+
             {selectedRange === "custom" && (
-              <>
+              <div className="space-y-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="compare"
                     checked={compare}
                     onCheckedChange={(checked) => setCompare(checked)}
                   />
-                  <Label htmlFor="compare">Compare</Label>
+                  <Label htmlFor="compare" className="text-sm">Compare</Label>
                 </div>
                 <div className="flex gap-2">
                   <Select value={customRange} onValueChange={setCustomRange}>
@@ -201,16 +219,17 @@ const AdsCalendarDialog = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={handleCancel}>
+
+        <DialogFooter className="sm:mt-6 gap-2">
+          <Button variant="outline" onClick={handleCancel} className="flex-1 sm:flex-none">
             Cancel
           </Button>
           <Button
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-none"
             onClick={handleUpdate}
           >
             Update

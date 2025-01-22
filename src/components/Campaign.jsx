@@ -401,6 +401,7 @@ useEffect(() => {
     "Ad ID",
     "Schedule",
     "Ad Set Name",
+     "Correct Purchases",
     "Conversion rate ranking",
     "Engagement rate ranking",
     "Quality ranking",
@@ -427,10 +428,10 @@ useEffect(() => {
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead className="w-20 text-xs font-bold border-r">Status</TableHead>
-              <TableHead className="border-r  text-xs font-bold min-w-[200px]">Campaign</TableHead>
+              <TableHead className="w-20 text-xs font-bold text-color border-r">Status</TableHead>
+              <TableHead className="border-r text-color text-xs font-bold min-w-[200px]">Campaign</TableHead>
               {visibleColumns.map((col) => (
-                <TableHead key={col} className="border-r text-xs min-w-[120px]">
+                <TableHead key={col} className="border-r text-color text-xs min-w-[120px]">
                   {col}
                 </TableHead>
               ))}

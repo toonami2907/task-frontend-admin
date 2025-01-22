@@ -275,7 +275,8 @@ const Ads = ({
                         onMouseEnter={() => setPreviewImage(ads)}
                       >
                         <img
-                          src={ads.creative && ads.creative.thumbnailUrl}
+                          src={ads.creative?.imageUrl ?  ads.creative.imageUrl :  ads.creative?.
+                            thumbnailUrl                         }
                           alt={ads.adName}
                           className="h-8 max-w-8 object-cover rounded hover:ring-2 hover:ring-blue-500"
                         />

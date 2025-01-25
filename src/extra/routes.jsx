@@ -7,7 +7,8 @@ import AuthPages from "@/components/AuthPages";
 import IntegrationsPage from "@/pages/IntegrationsPage";
 import { useGlobalContext } from "@/functions/features/StateProvider";
 import ShopifyConnectionSuccess from "@/components/ConnectionSuccessPage";
-import FbSucess from "@/components/fbSucess";
+import FbSucess from "@/components/FbSucess";
+
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {

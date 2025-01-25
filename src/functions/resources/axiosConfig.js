@@ -1,7 +1,7 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
-const API_URL = 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL;
 let isRefreshing = false; // Flag to track ongoing refresh token requests
 let refreshSubscribers = []; // Queue to hold requests while refresh token is being processed
 

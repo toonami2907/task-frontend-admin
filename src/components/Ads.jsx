@@ -41,7 +41,6 @@ const Ads = ({
   const [selectAll, setSelectAll] = useState(false);
   const [editingAdId, setEditingAdId] = useState(null);
   const [editingName, setEditingName] = useState("");
-  console.log("data", initialAdsData)
 
   useEffect(() => {
     if (adsSelectedBar.length > 0 && disableState) {
@@ -182,8 +181,6 @@ const Ads = ({
     return pixelSpec?.fb_pixel || [];
   };
 
-  console.log("disableState ads", disableState);
-  console.log(" adsSelectedBar", adsSelectedBar);
 
   if (!adsData || adsData.length === 0) {
     return <NoAd />;

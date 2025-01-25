@@ -60,6 +60,15 @@ export default {
 		screens: {
 			'xs': '475px',
 		  },
+		  keyframes: {
+			progressBar: {
+			  '0%': { width: '0%' },
+			  '100%': { width: '100%' }
+			}
+		  },
+		  animation: {
+			'progress-bar': 'progressBar 2.5s linear forwards'
+		  }
 	  },
 	},
   };

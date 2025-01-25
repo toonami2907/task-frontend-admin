@@ -1,201 +1,192 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // If using react-router-dom
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogTrigger 
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Check, AlertCircle, RefreshCcw } from 'lucide-react';
-import {toast} from 'react-hot-toast'
-import { API_URL } from '@/functions/features/StateProvider';
+import { Check, AlertCircle, RefreshCcw, Link2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { API_URL, useGlobalContext } from '@/functions/features/StateProvider';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-const PlatformConnector = () => {
-  const [facebookStatus, setFacebookStatus] = useState('disconnected');
-  const [shopifyStatus, setShopifyStatus] = useState('disconnected');
-  const [shopifyStore, setShopifyStore] = useState(''); // Store name input
-  const navigate = useNavigate(); // Hook for navigation
+const ConnectedPlatformsButton = ({ onClick }) => {
+  const { isPlatformConnected } = useGlobalContext();
+  const allConnected = isPlatformConnected.facebook && isPlatformConnected.shopify;
+
+  if (allConnected) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="outline" 
+              className="group flex items-center gap-2 border-green-500 bg-green-50 hover:bg-green-100"
+              onClick={onClick}
+            >
+              <Check className="w-5 h-5 text-green-600 group-hover:scale-110 transition-transform" />
+              <span className="text-green-800 font-semibold">
+                Platforms Connected
+              </span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Facebook Ads and Shopify are successfully linked</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return (
+    <Button 
+      variant="outline" 
+      className="group flex items-center gap-2"
+      onClick={onClick}
+    >
+      <Link2 className="w-5 h-5 text-blue-600 group-hover:rotate-12 transition-transform" />
+      <span className="text-blue-600 group-hover:text-blue-800">
+        Connect Platforms
+      </span>
+    </Button>
+  );
+};
+
+const PlatformConnectorDialog = () => {
+  const [shopifyStore, setShopifyStore] = useState('');
+  const { isPlatformConnected, updatePlatformConnection } = useGlobalContext();
+  const UserId = localStorage.getItem('UserId')
+  const renderConnectionStatus = (status) => {
+    const statusMap = {
+      connected: { icon: Check, text: 'Connected', color: 'text-green-600' },
+      connecting: { icon: RefreshCcw, text: 'Connecting...', color: 'text-blue-600 animate-pulse' },
+      error: { icon: AlertCircle, text: 'Connection Error', color: 'text-red-600' },
+      disconnected: { icon: AlertCircle, text: 'Not Connected', color: 'text-gray-600' }
+    };
+
+    const { icon: Icon, text, color } = statusMap[status];
+    return (
+      <div className={`flex items-center space-x-2 ${color}`}>
+        <Icon className="w-5 h-5" />
+        <span>{text}</span>
+      </div>
+    );
+  };
 
   const handleFacebookConnect = async () => {
-    setFacebookStatus('connecting');
     try {
       const response = await axios.get(`${API_URL}/auth/fb/auth`, {
         withCredentials: true,
       });
 
       if (response.status === 200) {
-        console.log(response.data.redirectUrl);
         window.location.href = response.data.redirectUrl;
       } else {
         throw new Error('Connection failed');
       }
     } catch (error) {
       console.error(error);
-      setFacebookStatus('error');
+      toast.error('Facebook connection failed');
     }
   };
 
   const handleShopifyConnect = async () => {
     if (!shopifyStore) {
-      toast.error('Please enter your Shopify store name.');
+      toast.error('Please enter your Shopify store name');
       return;
     }
 
-    // https://unduly-possible-piglet.ngrok-free.app/auth?shop=utm-fusion.myshopify.com
-    setShopifyStatus('connecting');
+    console.log('reached here')
+
     try {
-      const response = await axios.get(`${API_URL}/auth?shop=${shopifyStore}.myshopify.com`, {
+      const response = await axios.post(`${API_URL}/auth/install`,{
+        shop: `${shopifyStore}.myshopify.com`,
+        UserId
+      }, {
         withCredentials: true,
       });
 
       if (response.status === 200) {
-        console.log(response.data.redirectUrl);
-        window.location.href = response.data.redirectUrl;
+        window.location.href = response.data.installUrl;
       } else {
         throw new Error('Connection failed');
       }
     } catch (error) {
       console.error(error);
-      setShopifyStatus('error');
-    }
-  };
-
-  const handleDisconnect = async (platform) => {
-    try {
-      if (platform === 'facebook') {
-        await axios.post('/api/disconnect/facebook'); // Optional: call your backend to handle disconnect
-        setFacebookStatus('disconnected');
-      } else {
-        await axios.post('/api/disconnect/shopify'); // Optional: call your backend to handle disconnect
-        setShopifyStatus('disconnected');
-      }
-    } catch (error) {
-      console.error('Error during disconnection:', error);
-    }
-  };
-
-  const renderConnectionStatus = (platform, status) => {
-    switch (status) {
-      case 'connected':
-        return (
-          <div className="flex items-center space-x-2 text-green-600">
-            <Check className="w-5 h-5" />
-            <span>Connected</span>
-          </div>
-        );
-      case 'connecting':
-        return (
-          <div className="flex items-center space-x-2 text-blue-600">
-            <RefreshCcw className="w-5 h-5 animate-spin" />
-            <span>Connecting...</span>
-          </div>
-        );
-      case 'error':
-        return (
-          <div className="flex items-center space-x-2 text-red-600">
-            <AlertCircle className="w-5 h-5" />
-            <span>Connection Error</span>
-          </div>
-        );
-      default:
-        return (
-          <div className="flex items-center space-x-2 text-gray-600">
-            <AlertCircle className="w-5 h-5" />
-            <span>Not Connected</span>
-          </div>
-        );
+      toast.error('Shopify connection failed');
     }
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto font-sans p-4 space-y-6">
-      <h2 className="text-2xl font-bold mb-6">Connect Your Accounts</h2>
+    <Dialog>
+      <DialogTrigger asChild>
+        <ConnectedPlatformsButton />
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Connect Your Marketing Platforms</DialogTitle>
+          <DialogDescription>
+            Link your Facebook Ads and Shopify accounts to streamline your marketing workflow
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Facebook Connection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <img src="/meta ads.svg" className="w-6 h-6 text-blue-600" alt="Facebook Logo" />
-            <span>Facebook Ads Account</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex md:flex-row gap-3 flex-col items-center justify-between">
-            <div className="space-y-3 md:space-y-1">
-              <p className="text-sm text-gray-600">
-                Connect your Facebook account to manage ads and track performance
-              </p>
-              {renderConnectionStatus('facebook', facebookStatus)}
-            </div>
-            {facebookStatus === 'connected' ? (
-              <Button
-                variant="outline"
-                onClick={() => handleDisconnect('facebook')}
-                className="bg-red-50 text-red-600 hover:bg-red-100"
-              >
-                Disconnect
-              </Button>
-            ) : (
-              <Button
-                onClick={handleFacebookConnect}
-                className="border-blue-600 border bg-white font-sans hover:bg-white text-blue-600"
-                disabled={facebookStatus === 'connecting'}
-              >
-                <img src="/meta ads.svg" className="w-6 h-6 text-blue-600" alt="Facebook Icon" />
-                Connect Facebook
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Shopify Connection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <img src="/shopify-bag.svg" className="w-4 h-4 mr-2" alt="Shopify Logo" />
-            <span className="font-sans">Shopify Store</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex md:flex-row gap-3 flex-col items-center justify-between">
-            <div className="space-y-3 md:space-y-1">
-              <p className="text-sm text-gray-600">
-                Connect your Shopify store to sync products and track conversions
-              </p>
-              {renderConnectionStatus('shopify', shopifyStatus)}
-            </div>
-            {shopifyStatus === 'connected' ? (
-              <Button
-                variant="outline"
-                onClick={() => handleDisconnect('shopify')}
-                className="bg-red-50 text-red-600 hover:bg-red-100"
-              >
-                Disconnect
-              </Button>
-            ) : (
-              <div className="flex flex-col md:flex-row items-center gap-2">
-                <Input
-                  type="text"
-                  placeholder="Enter your store name"
-                  value={shopifyStore}
-                  onChange={(e) => setShopifyStore(e.target.value)}
-                  className="border-gray-300 text-sm rounded-md"
-                />
-                <Button
-                  onClick={handleShopifyConnect}
-                  className="border-green-600 border bg-white font-sans text-green-600 hover:bg-white"
-                  disabled={shopifyStatus === 'connecting'}
-                >
-                  <img src="/shopify-bag.svg" className="w-4 h-4 mr-2" alt="Shopify Icon" />
-                  Connect Shopify
-                </Button>
+        <div className="space-y-4">
+          {/* Facebook Connection */}
+          <div className="border rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <img src="/meta ads.svg" className="w-6 h-6" alt="Facebook Logo" />
+                <h3 className="font-semibold">Facebook Ads</h3>
               </div>
-            )}
+              {renderConnectionStatus(
+                isPlatformConnected.facebook ? 'connected' : 'disconnected'
+              )}
+            </div>
+            <Button 
+              onClick={handleFacebookConnect} 
+              disabled={isPlatformConnected.facebook}
+              className="w-full"
+            >
+              {isPlatformConnected.facebook ? 'Reconnect' : 'Connect Facebook'}
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+
+          {/* Shopify Connection */}
+          <div className="border rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <img src="/shopify-bag.svg" className="w-5 h-5" alt="Shopify Logo" />
+                <h3 className="font-semibold">Shopify Store</h3>
+              </div>
+              {renderConnectionStatus(
+                isPlatformConnected.shopify ? 'connected' : 'disconnected'
+              )}
+            </div>
+            <div className="flex space-x-2">
+              <Input
+                placeholder="Store name"
+                value={shopifyStore}
+                onChange={(e) => setShopifyStore(e.target.value)}
+                disabled={isPlatformConnected.shopify}
+                className="flex-grow"
+              />
+              <Button 
+                onClick={handleShopifyConnect}
+                disabled={isPlatformConnected.shopify}
+              >
+                {isPlatformConnected.shopify ? 'Reconnect' : 'Connect'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
-export default PlatformConnector;
+export default PlatformConnectorDialog;

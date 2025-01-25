@@ -1,22 +1,82 @@
-import { Routes, Route } from "react-router-dom";
-import Layout from "./Layout2";
+/* eslint-disable react/prop-types */
+import { Routes, Route, Navigate } from "react-router-dom";
 import { lazy } from "react";
+import Layout from "./Layout2";
 import FacebookCallback from "@/components/FBCallback";
 import AuthPages from "@/components/AuthPages";
+import IntegrationsPage from "@/pages/IntegrationsPage";
+import { useGlobalContext } from "@/functions/features/StateProvider";
+import ShopifyConnectionSuccess from "@/components/ConnectionSuccessPage";
+import FbSucess from "@/components/fbSucess";
 
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+   const userInfo  = localStorage.getItem('UserId');
 
+  return userInfo ? children : <Navigate to="/auth" replace />;
+};
 
+// Public Route Component (for auth pages)
+const PublicRoute = ({ children }) => {
+  const userInfo  = localStorage.getItem('UserId');
 
+  return userInfo ? <Navigate to="/" replace /> : children;
+};
 
 const App = lazy(() => import("../App"));
 
 const AppRoutes = () => {
   return (
     <Routes>
-       <Route path="/auth" element={<AuthPages/>} />
-      <Route path="/" element={<Layout/>}>
-      <Route index element={<App />} />
-      <Route path="/facebook/callback" element={<FacebookCallback/>} />
+      <Route
+        path="/auth"
+        element={
+          <PublicRoute>
+            <AuthPages />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/shopify/success"
+        element={
+          <ProtectedRoute>
+            <ShopifyConnectionSuccess />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/facebook/success"
+        element={
+          <ProtectedRoute>
+            <FbSucess />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/config"
+        element={
+          <ProtectedRoute>
+            <IntegrationsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/" element={<Layout />}>
+        <Route
+          index
+          element={
+            <ProtectedRoute>
+              <App />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/facebook/callback"
+          element={
+            <ProtectedRoute>
+              <FacebookCallback />
+            </ProtectedRoute>
+          }
+        />
       </Route>
     </Routes>
   );

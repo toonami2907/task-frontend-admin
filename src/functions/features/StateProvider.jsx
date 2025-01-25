@@ -1,12 +1,16 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useState,
+  useCallback,
 } from "react";
 import { sortPresets } from "@/functions/Preset";
-import axios from "axios";
+import api from "../resources/axiosConfig";
+
+
+
 
 export const StateContext = createContext();
 
@@ -28,50 +32,132 @@ export const defaultCustomColumn = [
   "Cost per 1,000 Accounts Center accounts reached",
 ];
 
-export const API_URL = import.meta.env.VITE_API_URL
+export const API_URL = import.meta.env.VITE_API_URL;
+
+
+export const handleLogout = async () => {
+  try {
+    await api.post(`${API_URL}/auth/v1/logout`, {}, { withCredentials: true });
+  } catch (error) {
+    console.error('Logout error:', error);
+  } finally {
+    localStorage.clear();
+  
+    document.cookie.split(";").forEach(cookie => {
+      document.cookie = cookie
+        .replace(/^ +/, "")
+        .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
+    });
+ 
+    window.location.href = '/auth';
+  }
+};
 export default function StateProvider({ children }) {
   const [state, setState] = useState("Campaign");
   const [selectedBar, setSelectedBar] = useState("");
   const [selectedBarData, setSelectedBarData] = useState(0);
   const [selectedPresets, setSelectedPresets] = useState("Setup");
   const [activeFilters, setActiveFilters] = useState([]);
-  const [loading, setLoading] = useState(false)
-  const [customColumn, setCustomColumn] = useState()
+  const [selectedAdAccount, setSelectedAdAccount] = useState(null);
 
-useEffect(()=>{
-  setCustomColumn(localStorage.getItem("customColumn"))
-},[])
+const updateSelectedAdAccount = (account) => {
+  setSelectedAdAccount(account);
+  localStorage.setItem('selectedAdAccount', JSON.stringify(account));
+};
+  const [loading, setLoading] = useState(false);
+  const [isPlatformConnected, setIsPlatformConnected] = useState({
+    shopify: false,
+    facebook: false,
+  });
+  const [userInfo, setUserInfo] = useState({});
+  const [customColumn, setCustomColumn] = useState();
+  console.log('selectedAdAccount', selectedAdAccount)
+  // Fetch user info and update platform connection statuses
+  const connectAccount = useCallback(async () => {
+    try {
+      const response = await api.get("/auth/profile", { withCredentials: true });
+      const { user } = response.data;
+
+      setUserInfo(user);
+
+      setIsPlatformConnected((prevState) => ({
+        ...prevState,
+        shopify: user.isShopifyConnected || false,
+        facebook: user.isFacebookConnected || false,
+      }));
+
+      console.log("User info fetched successfully:", user);
+    } catch (error) {
+      console.error("Error while connecting platform:", error.message);
+    }
+  }, []);
+
+  
+  const fetchAds = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (selectedAdAccount) {
+        await api.post(`${API_URL}/auth/ads`, { 
+          FACEBOOK_ADS_ACT_ID: selectedAdAccount.id 
+        });
+      } else {
+        await api.post(`${API_URL}/auth/ads`);
+      }
+      console.log("Ads fetched successfully");
+    } catch (error) {
+      console.error("Error fetching ads:", error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedAdAccount]);
+
+  // Initialize customColumn from localStorage and set up presets
+  useEffect(() => {
+    const storedCustomColumn = localStorage.getItem("customColumn");
+    if (storedCustomColumn) {
+      setCustomColumn(JSON.parse(storedCustomColumn));
+    } else {
+      setCustomColumn(sortPresets(selectedPresets));
+    }
+  }, [selectedPresets]);
+
   // Save customColumn to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem("customColumn", JSON.stringify(customColumn));
+    if (customColumn) {
+      localStorage.setItem("customColumn", JSON.stringify(customColumn));
+    }
   }, [customColumn]);
 
+  // Initialize data on mount
   useEffect(() => {
-   const presets =  sortPresets(selectedPresets);
-   setCustomColumn(presets)
-  }, [selectedPresets]);
-  useEffect(()=>{
+    fetchAds();
+    connectAccount();
+  }, [fetchAds, connectAccount]);
 
-  }, [activeFilters])
-  const fetchAds = async()=>{
-    setLoading((prev)=> !prev)
-    try {
-     await axios.get(`${API_URL}/auth/ads`)
-     setLoading((prev)=> !prev)
-    } catch (error) {
-      setLoading((prev)=> !prev)
-      console.error('error fetching ads', error.message)
-    }
-  }
-
-  useEffect(()=>{
-    fetchAds()
-  },[])
-  useEffect(() => {
-
-  }, [selectedBar, setSelectedBar])
   return (
-    <StateContext.Provider value={{ state, setState, setCustomColumn,setLoading, loading, customColumn, selectedPresets,fetchAds,setActiveFilters,activeFilters,  setSelectedPresets, setSelectedBar,selectedBarData,setSelectedBarData, selectedBar}}>
+    <StateContext.Provider
+      value={{
+        state,
+        setState,
+        customColumn,
+        setCustomColumn,
+        selectedPresets,
+        setSelectedPresets,
+        selectedBar,
+        setSelectedBar,
+        selectedBarData,
+        selectedAdAccount,
+        updateSelectedAdAccount,
+        setSelectedBarData,
+        activeFilters,
+        setActiveFilters,
+        loading,
+        setLoading,
+        fetchAds,
+        isPlatformConnected,
+        userInfo,
+      }}
+    >
       {children}
     </StateContext.Provider>
   );
@@ -79,7 +165,6 @@ useEffect(()=>{
 
 export const useGlobalContext = () => {
   const context = useContext(StateContext);
-
   if (!context) {
     throw new Error("useGlobalContext must be used within a StateProvider");
   }

@@ -1,25 +1,50 @@
 import React, { useState } from "react";
 import {
   Drawer,
+  DrawerClose,
   DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import { Button } from "./ui/button";
-import PlatformConnector from "./PlatformConnector";
+import { Button } from "@/components/ui/button";
+import { Link } from "lucide-react";
+import PlatformConnectorDialog from "./PlatformConnector";
 
 const ConnectAcc = () => {
   return (
-    <Drawer position="bottom">
-      <DrawerTrigger>
-        <Button className="flex items-center gap-2 bg-white text-blue-600 hover:bg-gray-50 font-semibold border border-blue-600 shadow-none ">
-          {" "}
-          <img src="/meta ads.svg" className="w-6 h-6 text-blue-600" />
-          <img src="/shopify-bag.svg" className="w-4 h-4 mr-2" />
-          Connect Your Accounts
+    <Drawer>
+      <DrawerTrigger asChild>
+        <Button variant="outline" className="group flex items-center gap-2">
+          <Link className="w-5 h-5 text-blue-600 group-hover:rotate-45 transition-transform" />
+          <span className="text-blue-600 group-hover:text-blue-800 transition-colors">
+            Connect Accounts
+          </span>
         </Button>
       </DrawerTrigger>
-      <DrawerContent className="bottom-0">
-        <PlatformConnector />
+      <DrawerContent className="max-h-[90vh] overflow-y-auto">
+        <DrawerHeader className="text-center">
+          <DrawerTitle className="text-2xl font-bold text-gray-800">
+            Platform Connections
+          </DrawerTitle>
+          <DrawerDescription className="text-gray-600">
+            Seamlessly connect your marketing and e-commerce platforms
+          </DrawerDescription>
+        </DrawerHeader>
+        
+        <div className="px-4 py-2">
+          <PlatformConnectorDialog />
+        </div>
+        
+        <DrawerFooter>
+          <DrawerClose asChild>
+            <Button variant="outline" className="w-full">
+              Close
+            </Button>
+          </DrawerClose>
+        </DrawerFooter>
       </DrawerContent>
     </Drawer>
   );

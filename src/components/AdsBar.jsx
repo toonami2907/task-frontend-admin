@@ -16,7 +16,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import toast from "react-hot-toast";
-import axios from "axios";
 import StyledDropdown from "./StyledDropdown";
 import DeliveryBar from "./DeliveryBar";
 import { Loader2, Pen } from "lucide-react";
@@ -30,6 +29,8 @@ import AdSetBudgetEditor from "./AdSetBudgetEditor";
 import { formatCurrency } from "@/hooks/func";
 import { formatDate } from "@/functions/resources";
 import SelectState from "@/components/SelectState";
+import api from "@/functions/resources/axiosConfig";
+
 
 const AdsManager = ({
   selectedBar,
@@ -42,7 +43,7 @@ const AdsManager = ({
   const [selectedAds, setSelectedAds] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { state, customColumn, activeFilters, fetchAds } =
+  const { state, customColumn,loading, activeFilters, fetchAds } =
     useGlobalContext();
   const [originalData, setOriginalData] = useState([]);
   const [editingAdSetId, setEditingAdSetId] = useState(null);
@@ -59,9 +60,10 @@ const AdsManager = ({
   const [adsSelectedBar, setAdsSelectedBar] = useState([]);
 
   const LoadingSpinner = () => (
-    <div className="flex items-center justify-center w-full py-8">
-      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-    </div>
+    <div className="flex flex-col items-center justify-center w-full py-8 space-y-2">
+    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+    <p className="text-sm text-gray-600">Loading ads data...</p>
+  </div>
   );
   const handleCancel = () => {
     setEditingAdSetId(null);
@@ -75,21 +77,22 @@ const AdsManager = ({
         let endpoint = "";
         switch (state) {
           case "Campaign":
-            endpoint = `${API_URL}/auth/db/campaigns`;
+            endpoint = `/auth/db/campaigns`;
             break;
           case "Ads Set":
-            endpoint = `${API_URL}/auth/db/ads_set`;
+            endpoint = `/auth/db/ads_set`;
             break;
           case "Ads":
-            endpoint = `${API_URL}/auth/db/ads`;
+            endpoint = `/auth/db/ads`;
             break;
           default:
-            endpoint = `${API_URL}/auth/db/campaigns`;
+            endpoint = `/auth/db/campaigns`;
             break;
         }
-        const response = await axios.get(endpoint, {
+        const response = await api.get(endpoint, {
           withCredentials: true,
         });
+        console.log('data', response.data)
         setOriginalData(response.data);
         setFetchData(response.data);
       } catch (error) {
@@ -108,8 +111,8 @@ const AdsManager = ({
 
   const handleAdSetNameUpdate = async (adSetId, newName) => {
     try {
-      const response = await axios.post(
-        `${API_URL}/auth/update/ads_set`,
+      const response = await api.post(
+        `/auth/update/ads_set`,
         {
           adSetId,
           newName,
@@ -143,8 +146,8 @@ const AdsManager = ({
       currentStatus === "ACTIVE" ? "PAUSED" : "ACTIVE";
 
     try {
-      const endpoint = `${API_URL}/auth/pause/Adset/${adSetId}`;
-      await axios.post(
+      const endpoint = `/auth/pause/Adset/${adSetId}`;
+      await api.post(
         endpoint,
         { status: newStatus },
         { withCredentials: true }
@@ -183,8 +186,8 @@ const AdsManager = ({
 
   const fetchCampaignId = async (campaignId) => {
     try {
-      const response = await axios.get(
-        `${API_URL}/auth/campaign/${campaignId}`,
+      const response = await api.get(
+        `/auth/campaign/${campaignId}`,
         { withCredentials: true }
       );
       return response.data;
@@ -195,8 +198,8 @@ const AdsManager = ({
 
   const fetchAdsSetById = async (adSetId) => {
     try {
-      const response = await axios.get(
-        `${API_URL}/auth/adsset/${adSetId}`,
+      const response = await api.get(
+        `/auth/adsset/${adSetId}`,
         {
           withCredentials: true,
         }
@@ -245,8 +248,8 @@ const AdsManager = ({
 
   const FetchAdsById = async (adId) => {
     try {
-      const response = await axios.get(
-        `${API_URL}/auth/ads/${adId}`,
+      const response = await api.get(
+        `/auth/ads/${adId}`,
         {
           withCredentials: true,
         }
@@ -548,21 +551,21 @@ const AdsManager = ({
     const statusMap = {
       Campaign: {
         ids: SelectedCamapiagn,
-        endpoint: `${API_URL}/auth/pause/status/campaigns`,
+        endpoint: `/auth/pause/status/campaigns`,
         idField: "campaignIds",
         entityName: "Campaign",
         idKey: "campaignId",
       },
       "Ads Set": {
         ids: selectedBar,
-        endpoint: `${API_URL}/auth/pause/status/AdSets`,
+        endpoint: `/auth/pause/status/AdSets`,
         idField: "adSetIds",
         entityName: "Ads set",
         idKey: "adSetId",
       },
       Ads: {
         ids: adsSelectedBar,
-        endpoint: `${API_URL}/auth/pause/status/Ads`,
+        endpoint: `/auth/pause/status/Ads`,
         idField: "adIds",
         entityName: "Ads",
         idKey: "adId",
@@ -594,7 +597,7 @@ const AdsManager = ({
         [entityConfig.idField]: entityConfig.ids,
       };
 
-      const response = await axios.post(
+      const response = await api.post(
         entityConfig.endpoint,
         payload
       );
@@ -654,7 +657,7 @@ const AdsManager = ({
     </div>
 
       {/* Table View with Loading State */}
-      {isLoading ? (
+      {isLoading || loading ? (
         <LoadingSpinner />
       ) : hasData(originalData) ? (
         <Table className="min-w-[1000px]">

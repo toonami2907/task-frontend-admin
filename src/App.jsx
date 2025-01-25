@@ -3,6 +3,8 @@ import AdsManager from "./components/AdsBar";
 import MyTabs from "./components/TabsScection";
 import TimestampWithReload from "./components/TimestampWithReload";
 import { useGlobalContext } from "@/functions/features/StateProvider";
+import PlatformConnectorDialog from "./components/PlatformConnector";
+
 
 const App = () => {
   const [barData, setBarData] = useState([]);
@@ -33,6 +35,7 @@ const Reload = ()=>{
 
   return (
     <div className="">
+
       <div className="relative my-10 bg-inherit min-w-screen w-full">
       {/* <div className="w-full pr-5 justify-end absolute top-0 items-end flex"> */}
         <TimestampWithReload

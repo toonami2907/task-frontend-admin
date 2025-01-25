@@ -11,6 +11,7 @@ const AuthPage = () => {
   const [isSignIn, setIsSignIn] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false)
   const [name, setName] = useState("");
   const navigate = useNavigate();
 
@@ -30,6 +31,7 @@ const AuthPage = () => {
         `Password length must be greater than ${password.length}`
       );
     }
+    setLoading(true)
     try {
       const response = await axios.post(
         `${API_URL}/auth/v1/register`,
@@ -39,6 +41,7 @@ const AuthPage = () => {
         }
       );
       if (response.status === 201 || response.status === 200) {
+        setLoading(false)
         toast.success("User registered successfully");
         setEmail("");
         setName("");
@@ -46,6 +49,7 @@ const AuthPage = () => {
         setIsSignIn(true);
       }
     } catch (error) {
+      setLoading(false)
       if (import.meta.env.NODE_ENV != "Production") {
         console.log(error.response.data);
       }
@@ -65,6 +69,7 @@ const AuthPage = () => {
         `Password length must be greater than ${password.length}`
       );
     }
+    setLoading(true)
     try {
       const response = await axios.post(`${API_URL}/auth/v1/login`, {
         email,
@@ -74,6 +79,7 @@ const AuthPage = () => {
       const { accessToken, refreshToken, UserId } = response.data;
       if (response.status === 201 || response.status === 200) {
         toast.success("User Logged successfully");
+        setLoading(false)
         localStorage.setItem("UserId", UserId);
         Cookies.set("access_token", accessToken);
         Cookies.set("refresh_token", refreshToken);
@@ -84,6 +90,7 @@ const AuthPage = () => {
         window.location.reload();
       }
     } catch (error) {
+      setLoading(false)
       if (import.meta.env.NODE_ENV != "Production") {
         console.log(error.response.data);
       }
@@ -191,17 +198,19 @@ const AuthPage = () => {
               {isSignIn ? (
                 <button
                   type="submit"
+                  disabled={loading}
                   onClick={(e) => handleSignIn(e)}
-                  className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
+                  className="w-full flex justify-center disabled:bg-indigo-400 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
                 >
-                  Sign in
+                  {loading ? 'Signing in ' : 'Sign in'}
                 </button>
               ) : (
                 <button
                   onClick={(e) => handleSignUp(e)}
-                  className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
+                  disabled={loading}
+                  className="w-full flex justify-center disabled:bg-indigo-400 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
                 >
-                  Register
+                 {loading ? 'Registerring ' : 'Register'}
                 </button>
               )}
             </form>

@@ -92,10 +92,14 @@ const updateSelectedAdAccount = (account) => {
     }
   }, []);
 
+
+
+
   
   const fetchAds = useCallback(async () => {
     setLoading(true);
     try {
+      await api.get("/auth/fetchOrder", { withCredentials: true });
       if (selectedAdAccount) {
         await api.post(`${API_URL}/auth/ads`, { 
           FACEBOOK_ADS_ACT_ID: selectedAdAccount.id 

@@ -18,12 +18,12 @@ import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { Trash2 } from "lucide-react"
 import { useGlobalContext } from "@/functions/features/StateProvider"
-import SubscriptionSection from "@/sections/SubscriptionSection"
+import { useNavigate } from "react-router-dom"
 
 export default function AccountSettings() {
   const { toast } = useToast()
   const {userInfo} =useGlobalContext()
-
+  const navigate = useNavigate()
   // Color Constants
   const colors = {
     primary: {
@@ -378,8 +378,7 @@ export default function AccountSettings() {
       </section>
 
       {/* Subscription Section */}
-      <SubscriptionSection userInfo={userInfo} colors={colors}/>
-      {/* <section className="bg-white rounded-lg shadow-sm border border-[#E5E7EB]">
+      <section className="bg-white rounded-lg shadow-sm border border-[#E5E7EB]">
         <div className="p-6">
           <h2 className="text-2xl font-semibold text-[#111827]">Subscription</h2>
           <p className="text-sm text-[#374151] mt-1">
@@ -389,12 +388,15 @@ export default function AccountSettings() {
         <Separator className="bg-[#E5E7EB]" />
         <div className="p-6 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[#F9FAFB] p-4 rounded-lg border border-[#E5E7EB]">
-            <div>
+            <div
+            >
               <h3 className="font-medium text-[#111827]">Pro Plan</h3>
               <p className="text-sm text-[#374151]">$29/month</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
-              <Button variant="outline" className="w-full sm:w-auto">
+              <Button 
+                        onClick={()=>navigate('/billing/pricing')}
+              variant="outline" className="w-full sm:w-auto">
                 Change Plan
               </Button>
               <AlertDialog>
@@ -407,7 +409,7 @@ export default function AccountSettings() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Cancel Subscription</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Are you sure you want to cancel your subscription? You'll lose access to all Pro features at the end of your billing period.
+                      Are you sure you want to cancel your subscription? You&rsquo;ll lose access to all Pro features at the end of your billing period.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter className="sm:space-x-2">
@@ -432,7 +434,7 @@ export default function AccountSettings() {
             </Label>
           </div>
         </div>
-      </section> */}
+      </section>
 
       {/* Billing Section */}
       <section className="bg-white rounded-lg shadow-sm border border-[#E5E7EB]">

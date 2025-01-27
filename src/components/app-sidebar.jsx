@@ -129,16 +129,13 @@ export function AppSidebar({
           },
           {
             title: "Integrations",
-            url: "#",
+            url: "/user/platform",
           },
           {
             title: "Billing",
-            url: "#",
+            url: "/user/account",
           },
-          {
-            title: "Limits",
-            url: "#",
-          },
+         
         ],
       },
     ],
@@ -167,7 +164,7 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

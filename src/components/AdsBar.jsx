@@ -641,6 +641,9 @@ const AdsManager = ({
           state={disableState}
           setState={setDisableState}
           disableState={setDisableState}
+          ads={adsSelectedBar}
+          adset={selectedBar}
+          campaign={SelectedCamapiagn}
           handleStateStatus={handleStateStatus}
         />
         <div className="max-w-[200px] sm:max-w-none">

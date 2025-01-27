@@ -13,8 +13,8 @@ const DeliveryBar = () => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-sm border rounded-md hover:bg-gray-50">
-        <span className="text-gray-700">Delivery: {selected}</span>
+      <DropdownMenuTrigger className="flex items-center gap-2 px-2 py-1.5 text-sm border rounded-md hover:bg-gray-50">
+        <span className="text-black">Delivery: {selected}</span>
         <ChevronDown className="w-4 h-4 text-gray-500" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-36">

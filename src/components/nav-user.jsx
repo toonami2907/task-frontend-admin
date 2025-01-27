@@ -30,11 +30,13 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { handleLogout, useGlobalContext } from "@/functions/features/StateProvider"
+import { useNavigate } from "react-router-dom"
 
 export function NavUser({
   user
 }) {
-  const { isMobile } = useSidebar()
+  const { isMobile } = useSidebar() 
+  const naviagte = useNavigate() 
   const {userInfo} = useGlobalContext()
 
   return (
@@ -82,17 +84,11 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+               onClick={()=>naviagte('/user/account')}
+              >
                 <BadgeCheck />
                 Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

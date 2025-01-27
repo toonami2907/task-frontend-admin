@@ -85,9 +85,9 @@ const StyledDropdown = () => {
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              className="flex items-center gap-2 w-full justify-between"
+              className="flex items-center gap-2 px-1 py-1.5 w-full justify-between"
             >
-              <span className="font-sans flex items-center gap-2"><Columns3/> Columns: {selectedPresets}</span>
+              <span className="font-normal flex items-center text-black gap-2"><Columns3/> Columns: {selectedPresets}</span>
               <ChevronDown className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>

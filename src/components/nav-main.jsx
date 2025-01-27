@@ -17,10 +17,13 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
+import { useNavigate } from "react-router-dom";
 
 export function NavMain({
   items
 }) {
+
+  const naviagte = useNavigate() 
   return (
     (<SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
@@ -35,9 +38,16 @@ export function NavMain({
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton tooltip={item.title}>
                   {item.icon && <item.icon />}
-                  <span>{item.title}</span>
+                  <span 
+                  onClick={()=>{
+                    if(item.title === 'Dashboard'){
+                      naviagte("/")
+                    }
+                  }
+                }
+                  >{item.title}</span>
                   <ChevronRight
-                    className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    className="ml-auto transition-transform duration-200  group-data-[state=open]/collapsible:rotate-90" />
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent>

@@ -59,6 +59,8 @@ export default function StateProvider({ children }) {
   const [selectedPresets, setSelectedPresets] = useState("Setup");
   const [activeFilters, setActiveFilters] = useState([]);
   const [selectedAdAccount, setSelectedAdAccount] = useState(null);
+  const [userInfo, setUserInfo] = useState({});
+  const [customColumn, setCustomColumn] = useState();
 
 const updateSelectedAdAccount = (account) => {
   setSelectedAdAccount(account);
@@ -69,9 +71,16 @@ const updateSelectedAdAccount = (account) => {
     shopify: false,
     facebook: false,
   });
-  const [userInfo, setUserInfo] = useState({});
-  const [customColumn, setCustomColumn] = useState();
+ 
   console.log('selectedAdAccount', selectedAdAccount)
+
+  useEffect(() => {
+  const act_id =  localStorage.getItem('Adsaccount')
+  if (act_id) {
+    setSelectedAdAccount(act_id)
+  }
+  }, [])
+  
   // Fetch user info and update platform connection statuses
   const connectAccount = useCallback(async () => {
     try {
@@ -98,6 +107,7 @@ const updateSelectedAdAccount = (account) => {
   
   const fetchAds = useCallback(async () => {
     setLoading(true);
+
     try {
       await api.get("/auth/fetchOrder", { withCredentials: true });
       if (selectedAdAccount) {

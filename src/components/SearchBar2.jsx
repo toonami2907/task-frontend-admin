@@ -128,7 +128,7 @@ const SearchBar2 = () => {
   return (
     <div className="w-full max-w-[300px] xs:max-w-[470px] lg:max-w-[800px] relative font-sans">
     <div className="relative">
-      <div className="flex items-start border border-gray-300 rounded-2xl sm:rounded-3xl bg-white">
+      <div className="flex items-start border border-black w-full rounded-2xl sm:rounded-3xl bg-white">
         <div className="flex flex-wrap gap-1.5 sm:gap-2 p-1.5 sm:p-2 w-full min-h-[30px] overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
           <div className="flex flex-wrap gap-1.5 sm:gap-2 max-w-full">
             {filters.slice(0, MAX_VISIBLE_FILTERS).map((filter, index) => (

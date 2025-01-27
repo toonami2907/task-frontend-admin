@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import AppRoutes from "./extra/routes";
 import Loading from "./components/Loading";
 import { Toaster } from "react-hot-toast";
+import { Toaster as UI } from "@/components/ui/toaster"
 import StateProvider from "./functions/features/StateProvider";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -12,6 +13,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <Suspense fallback={<Loading />}>
       <StateProvider>
         <Toaster />
+        <UI />
         <AppRoutes />
       </StateProvider>
     </Suspense>

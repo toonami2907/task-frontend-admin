@@ -94,7 +94,7 @@ const AuthPage = () => {
       if (import.meta.env.NODE_ENV != "Production") {
         console.log(error.response.data);
       }
-      return ErrorToast(error.response?.data?.message);
+      return ErrorToast(error.response?.data?.[0].message || 'Error while Logging in, check your credentials and try again later ');
     }
   };
 

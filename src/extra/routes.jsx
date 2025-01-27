@@ -8,6 +8,8 @@ import IntegrationsPage from "@/pages/IntegrationsPage";
 import { useGlobalContext } from "@/functions/features/StateProvider";
 import ShopifyConnectionSuccess from "@/components/ConnectionSuccessPage";
 import FbSucess from "@/components/FbSucess";
+import AccountSettings from "@/components/AccountSettings";
+
 
 
 // Protected Route Component
@@ -25,6 +27,7 @@ const PublicRoute = ({ children }) => {
 };
 
 const App = lazy(() => import("../App"));
+const PlatformConnectionPage = lazy(() => import("@/components/PlatformConnector"));
 
 const AppRoutes = () => {
   return (
@@ -37,6 +40,7 @@ const AppRoutes = () => {
           </PublicRoute>
         }
       />
+      
       <Route
         path="/shopify/success"
         element={
@@ -70,6 +74,22 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+        path="/user/account"
+        element={
+          <ProtectedRoute>
+            <AccountSettings />
+          </ProtectedRoute>
+        }
+      />
+        <Route
+        path="/user/platform"
+        element={
+          <ProtectedRoute>
+            <PlatformConnectionPage />
+          </ProtectedRoute>
+        }
+      />
         <Route
           path="/facebook/callback"
           element={

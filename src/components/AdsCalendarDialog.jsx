@@ -149,9 +149,9 @@ const AdsCalendarDialog = () => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2 text-xs sm:text-sm">
+        <Button variant="outline" className="flex items-center gap-2 px-2 py-1.5 text-xs sm:text-sm">
           <Calendar1 className="h-4 w-4" />
-          <span className="hidden sm:inline">
+          <span className="hidden sm:inline font-normal text-black">
             {date.from.toLocaleDateString("en-US", options)} -{" "}
             {date.to.toLocaleDateString("en-US", options)}
           </span>

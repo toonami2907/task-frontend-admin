@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 "use client"
 
 import {
@@ -77,9 +78,11 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+               onClick={()=>naviagte('/billing/pricing')}
+              >
                 <Sparkles />
-                Upgrade to Pro
+                Upgrade plan
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

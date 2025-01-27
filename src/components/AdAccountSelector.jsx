@@ -50,7 +50,8 @@ const AdAccountSelector = () => {
       value={selectedAdAccount?.account_id}
       onValueChange={handleAccountChange}
     >
-      <SelectTrigger>
+      <SelectTrigger
+       className='max-w-44 w-full text-xs py-1.5 px-2'>
         <SelectValue 
           placeholder={
             selectedAdAccount?.account_id 
@@ -59,7 +60,8 @@ const AdAccountSelector = () => {
           }
         />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent
+      >
         {user.adAccounts.map(account => (
           <SelectItem 
             key={account.account_id} 

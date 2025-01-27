@@ -125,7 +125,7 @@ export function AppSidebar({
         items: [
           {
             title: "General",
-            url: "#",
+            url: "/user/account",
           },
           {
             title: "Integrations",
@@ -133,7 +133,7 @@ export function AppSidebar({
           },
           {
             title: "Billing",
-            url: "/user/account",
+            url: "/billing/pricing",
           },
          
         ],

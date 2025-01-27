@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { Trash2 } from "lucide-react"
 import { useGlobalContext } from "@/functions/features/StateProvider"
+import SubscriptionSection from "@/sections/SubscriptionSection"
 
 export default function AccountSettings() {
   const { toast } = useToast()
@@ -377,7 +378,8 @@ export default function AccountSettings() {
       </section>
 
       {/* Subscription Section */}
-      <section className="bg-white rounded-lg shadow-sm border border-[#E5E7EB]">
+      <SubscriptionSection userInfo={userInfo} colors={colors}/>
+      {/* <section className="bg-white rounded-lg shadow-sm border border-[#E5E7EB]">
         <div className="p-6">
           <h2 className="text-2xl font-semibold text-[#111827]">Subscription</h2>
           <p className="text-sm text-[#374151] mt-1">
@@ -430,7 +432,7 @@ export default function AccountSettings() {
             </Label>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Billing Section */}
       <section className="bg-white rounded-lg shadow-sm border border-[#E5E7EB]">

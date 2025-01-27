@@ -68,7 +68,7 @@ function Layout() {
                 </Breadcrumb>
               </div>
               <div className="px-4 flex items-center gap-2 py-2">
-                <h1 className=" text-xs text-black sm:text-sm">Connected Platform Status:</h1>
+                <h1 className="hidden text-xs text-black sm:block sm:text-sm">Connected Platform Status:</h1>
                 <div
                   className={`w-2 h-2 rounded-full ${
                     isPlatformConnected.shopify === true &&

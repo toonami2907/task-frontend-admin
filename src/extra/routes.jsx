@@ -9,6 +9,7 @@ import { useGlobalContext } from "@/functions/features/StateProvider";
 import ShopifyConnectionSuccess from "@/components/ConnectionSuccessPage";
 import FbSucess from "@/components/FbSucess";
 import AccountSettings from "@/components/AccountSettings";
+import PricingPage from "@/pages/PricingPage";
 
 
 
@@ -25,9 +26,15 @@ const PublicRoute = ({ children }) => {
 
   return userInfo ? <Navigate to="/" replace /> : children;
 };
+const PublicRoute2 = ({ children }) => {
+  const userInfo  = localStorage.getItem('UserId');
+
+  return  children;
+};
 
 const App = lazy(() => import("../App"));
 const PlatformConnectionPage = lazy(() => import("@/components/PlatformConnector"));
+const PricingDetailsPage = lazy(() => import("@/pages/PricingDetailsPage"));
 
 const AppRoutes = () => {
   return (
@@ -38,6 +45,14 @@ const AppRoutes = () => {
           <PublicRoute>
             <AuthPages />
           </PublicRoute>
+        }
+      />
+      <Route
+        path="/pricing"
+        element={
+          <PublicRoute2>
+            <PricingDetailsPage />
+          </PublicRoute2>
         }
       />
       
@@ -79,6 +94,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <AccountSettings />
+          </ProtectedRoute>
+        }
+      />
+        <Route
+        path="/billing/pricing"
+        element={
+          <ProtectedRoute>
+            <PricingPage />
           </ProtectedRoute>
         }
       />

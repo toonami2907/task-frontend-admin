@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ShieldCheck, KeyRound, Mail, Loader2 } from "lucide-react";
 import api from "@/functions/resources/axiosConfig";
 import Cookies from "js-cookie";
+import toast from "react-hot-toast";
 
 export function AdminLogin() {
   const navigate = useNavigate();
@@ -29,7 +30,9 @@ export function AdminLogin() {
       Cookies.set("admin_access_token", accessToken);
       Cookies.set("admin_refresh_token", refreshToken);
       localStorage.setItem("AdminId", admin.id)
+      toast.success('Admin Logged In sucessfully')
       navigate("/admin/dashboard")
+      window.location.reload()()
     } catch (error) {
       setError("Invalid credentials. Please try again.");
       console.error(error);

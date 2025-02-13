@@ -9,7 +9,7 @@ export const SubscriptionSuccess = () => {
   const [searchParams] = useSearchParams()
   const [sessionData, setSessionData] = useState(null)
   const sessionId = searchParams.get('session_id')
-  console.log('sessionId', sessionId)
+
 
   useEffect(() => {
     const getSessionDetails = async () => {

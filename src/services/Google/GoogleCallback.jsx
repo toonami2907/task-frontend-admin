@@ -22,8 +22,10 @@ const GoogleCallback = () => {
         localStorage.setItem("UserId", UserId);
         Cookies.set("access_token", accessToken);
         Cookies.set("refresh_token", refreshToken);
-        navigate("/");
-        window.location.reload();
+        setTimeout(() => {
+          navigate('/')
+          window.location.reload()
+      }, 3000)
       }
     } catch (err) {
       setError(

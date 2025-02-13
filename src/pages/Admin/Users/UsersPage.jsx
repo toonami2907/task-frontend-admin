@@ -9,7 +9,8 @@ import {
   Search,
   ChevronDown,
   Filter,
-  X
+  X,
+  Calendar
 } from 'lucide-react';
 import adminApi from '@/services/API/adminAxiosConfig';
 import {
@@ -41,6 +42,7 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { API_URL } from '@/functions/features/StateProvider';
+import { formatDate } from '@/components/Admin/ultils/formatDate';
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -173,7 +175,7 @@ const UsersPage = () => {
     return (
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">
+          <CardTitle className="text-sm font-medium text-black">
             {title}
           </CardTitle>
         </CardHeader>
@@ -283,11 +285,13 @@ const UsersPage = () => {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent border-none">
-                <TableHead className="text-sm font-semibold text-gray-600">User</TableHead>
-                <TableHead className="text-sm font-semibold text-gray-600">Email</TableHead>
-                <TableHead className="text-sm font-semibold text-gray-600">Status</TableHead>
+                <TableHead className="text-sm font-semibold text-black">User</TableHead>
+                <TableHead className="text-sm font-semibold text-black">Email</TableHead>
+                <TableHead className="text-sm font-semibold text-black">Status</TableHead>
+                <TableHead className="text-sm font-semibold text-black">Created</TableHead>
+                <TableHead className="text-sm font-semibold text-black">Last Login</TableHead>
                 {hasPermission('users', 'update') && (
-                  <TableHead className="text-sm font-semibold text-gray-600">Actions</TableHead>
+                  <TableHead className="text-sm font-semibold text-black">Actions</TableHead>
                 )}
               </TableRow>
             </TableHeader>
@@ -299,19 +303,37 @@ const UsersPage = () => {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                          <User className="h-5 w-5 text-gray-600" />
+                          <User className="h-5 w-5 text-black" />
                         </div>
                         <div>
-                          <div className="font-medium text-gray-900">{user.name || 'No Name'}</div>
-                          <div className="text-sm text-gray-500">ID: {user._id.slice(-6)}</div>
+                          <div className="font-medium text-xs text-gray-900">{user.name || 'No Name'}</div>
+                          <div className="text-xs text-gray-500">ID: {user._id.slice(-6)}</div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-gray-600">{user.email}</TableCell>
+                    <TableCell className="text-black text-xs">{user.email}</TableCell>
                     <TableCell>
                       <Badge className={`${statusConfig.bg} ${statusConfig.color} border ${statusConfig.border} px-2 py-1`}>
                         {user.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                     {user.createdAt && (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <span className="text-xs text-black">{formatDate(user.createdAt)}</span>
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                     {user.lastLogin ? (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <span className="text-xs text-black">{formatDate(user.lastLogin)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-black">Never</span>
+                      )}
                     </TableCell>
                     {hasPermission('users', 'update') && (
                       <TableCell>

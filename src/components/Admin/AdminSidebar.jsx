@@ -79,56 +79,56 @@ export function AdminSidebar({ ...props }) {
          
         ],
       },
-      {
-        title: "Marketing",
-        url: "/admin/marketing",
-        icon: Mail,
-        items: [
-          {
-            title: "Email Campaigns",
-            url: "/admin/marketing/campaigns",
-          },
-          {
-            title: "Campaign Analytics",
-            url: "/admin/marketing/analytics",
-          }
-        ],
-      },
-      {
-        title: "Analytics",
-        url: "/admin/analytics",
-        icon: BarChart3,
-        items: [
-          {
-            title: "Overview",
-            url: "/admin/analytics/overview",
-          },
-          {
-            title: "Reports",
-            url: "/admin/analytics/reports",
-          }
-        ],
-      },
-      {
-        title: "Settings",
-        url: "/admin/settings",
-        icon: Settings,
-        items: [
-          {
-            title: "General",
-            url: "/admin/settings/general",
-          },
-          {
-            title: "Email Templates",
-            url: "/admin/settings/email-templates",
-          }
-        ],
-      },
+      // {
+      //   title: "Marketing",
+      //   url: "/admin/marketing",
+      //   icon: Mail,
+      //   items: [
+      //     {
+      //       title: "Email Campaigns",
+      //       url: "/admin/marketing/campaigns",
+      //     },
+      //     {
+      //       title: "Campaign Analytics",
+      //       url: "/admin/marketing/analytics",
+      //     }
+      //   ],
+      // },
+      // {
+      //   title: "Analytics",
+      //   url: "/admin/analytics",
+      //   icon: BarChart3,
+      //   items: [
+      //     {
+      //       title: "Overview",
+      //       url: "/admin/analytics/overview",
+      //     },
+      //     {
+      //       title: "Reports",
+      //       url: "/admin/analytics/reports",
+      //     }
+      //   ],
+      // },
+      // {
+      //   title: "Settings",
+      //   url: "/admin/settings",
+      //   icon: Settings,
+      //   items: [
+      //     {
+      //       title: "General",
+      //       url: "/admin/settings/general",
+      //     },
+      //     {
+      //       title: "Email Templates",
+      //       url: "/admin/settings/email-templates",
+      //     }
+      //   ],
+      // },
     ]
   }
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar  collapsible="icon" {...props}>
       <SidebarHeader>
       <NavAdmin user={{ name: "Admin", email: "admin@example.com", avatar: "/avatars/admin.jpg" }} />
       </SidebarHeader>

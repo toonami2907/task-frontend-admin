@@ -128,7 +128,7 @@ const SearchBar2 = () => {
   return (
     <div className="xs:w-full max-w-[300px] xs:max-w-[470px] w-full lg:max-w-[800px] relative font-sans">
     <div className="relative">
-      <div className="flex items-start border border-black w-full rounded-2xl sm:rounded-3xl bg-white">
+      <div className="flex items-center border justify-center border-black b w-full rounded-2xl sm:rounded-3xl bg-white">
         <div className="flex flex-wrap gap-1.5 sm:gap-2 p-1.5 sm:p-2 w-full min-h-[30px] overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
           <div className="flex flex-wrap gap-1.5 sm:gap-2 max-w-full">
             {filters.slice(0, MAX_VISIBLE_FILTERS).map((filter, index) => (
@@ -159,10 +159,10 @@ const SearchBar2 = () => {
             </div>
 
             {!isAtMaxFilters && (
-              <div className="flex items-center min-w-[80px] xs:min-w-[120px] sm:min-w-[200px] flex-1">
+              <div className="flex items-center min-w-[80px] xs:min-w-[120px] xl:min-w-[400px] flex-1">
                 <input
                   type="text"
-                  className="w-full px-1.5 sm:px-2 py-1 sm:py-1.5 bg-transparent rounded-2xl sm:rounded-3xl border-none focus:ring-0 text-[10px] sm:text-xs"
+                  className="w-full px-1.5 sm:px-2 py-1 sm:py-1.5 bg-transparent rounded-2xl sm:rounded-3xl border-none h-full focus:ring-0 text-[10px] sm:text-xs"
                   placeholder="Search by name, ID, metric"
                   value={query}
                   onChange={(e) => {

@@ -67,7 +67,9 @@ li{
   body{
     @apply text-sm font-sans text-color;
   }
-
+  .prose-custom {
+    @apply prose prose-slate max-w-none;
+  }
   .defaut_head_style{
     @apply max-w-[1300px] px-5 md:px-10 xl:px-0 w-full mx-auto
 }
@@ -77,7 +79,16 @@ li{
 
 
 
+
+
 @layer base {
+  html {
+    @apply antialiased;
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
   :root {
         --radius: 0.5rem;
         --sidebar-background: 0 0% 98%;

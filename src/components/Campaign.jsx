@@ -18,6 +18,7 @@ import toast from "react-hot-toast";
 import { Pen, Loader } from "lucide-react";
 import BudgetEditor from "./BudgetEditor";
 import { formatCurrency } from "@/hooks/func";
+import api from "@/functions/resources/axiosConfig";
 
 const STATUS_COLORS = {
   ACTIVE: "bg-green-500",
@@ -42,7 +43,7 @@ const Campaign = ({ fetchedData, customColumn,  SelectedCamapiagn,disableState ,
 
     setIsLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/auth/update/campaign`, {
+      const response = await api.post(`${API_URL}/auth/update/campaign`, {
         campaignId,
         newName: newName.trim(),
       });
@@ -156,9 +157,9 @@ useEffect(() => {
   const handleSwitchToggle = async (campaignId, newStatus) => {
     setUpdatingStatus(campaignId);
     try {
-      const response = await axios.post(`${API_URL}/auth/pause/${campaignId}`, {
+      const response = await api.post(`${API_URL}/auth/pause/${campaignId}`, {
         status: newStatus,
-      });
+      },{withCredentials:true});
 
       if (response.status == 200) {
         setCampaignData((prevData) =>

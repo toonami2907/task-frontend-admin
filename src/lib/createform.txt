@@ -1,0 +1,721 @@
+// components/CreateRuleForm.jsx
+import React, { useEffect, useState } from "react";
+import PropTypes from "prop-types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Search, X } from "lucide-react";
+import api from "@/functions/resources/axiosConfig";
+import { TimePicker } from "./TimePicker";
+import { ErrorToast } from "@/hooks/customToast";
+import toast from "react-hot-toast";
+import { conditionConfig } from "@/lib/rule.config";
+
+export const CreateRuleForm = ({ isOpen, onClose, onSubmit }) => {
+    const [showTimeRange, setShowTimeRange] = useState(false);
+    const [formData, setFormData] = useState({
+        name: "",
+        targetLevel: "campaign",
+        targetId: "",
+        conditions: [],
+        actions: [],
+        frequency: "daily",
+        frequencyValue: 1,
+        timeRanges: [], 
+        status: "active",
+      });
+
+      const [targetOptions, setTargetOptions] = useState([]);
+      const [filteredOptions, setFilteredOptions] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [searchTerm, setSearchTerm] = useState("");
+
+      useEffect(() => {
+        const fetchTargetOptions = async () => {
+            setLoading(true);
+            try {
+                let endpoint;
+                switch (formData.targetLevel) {
+                    case "campaign":
+                        endpoint = "/auth/db/campaigns";
+                        break;
+                    case "adSet":
+                        endpoint = "/auth/db/ads_set";
+                        break;
+                    case "ad":
+                        endpoint = "/auth/db/ads";
+                        break;
+                    default:
+                        endpoint = "/auth/db/campaigns";
+                }
+
+                const response = await api.get(endpoint);
+                setTargetOptions(response.data);
+                setFilteredOptions(response.data);
+            } catch (error) {
+                console.error("Error fetching target options:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchTargetOptions();
+    }, [formData.targetLevel]);
+
+    // Search functionality
+    const handleSearch = (term) => {
+        setSearchTerm(term);
+        const filtered = targetOptions.filter(option => {
+            const searchValue = term.toLowerCase();
+            switch (formData.targetLevel) {
+                case "campaign":
+                    return option.campaignName.toLowerCase().includes(searchValue);
+                case "adSet":
+                    return option.adSetName.toLowerCase().includes(searchValue);
+                case "ad":
+                    return option.adName.toLowerCase().includes(searchValue);
+                default:
+                    return false;
+            }
+        });
+        setFilteredOptions(filtered);
+    };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+    await onSubmit(formData);
+    setFormData({
+      name: "",
+      targetLevel: "campaign",
+      targetId: "",
+      conditions: [],
+      actions: [],
+      frequency: "daily",
+      frequencyValue: 1,
+      timeRanges: [], 
+      status: "active",
+    })
+    toast.success('Rule Created sucessfully')
+    onClose();
+    } catch (error) {
+      console.error('error', error?.message)
+      return ErrorToast(error?.message || 'error while creating a rule ')
+    }
+    
+  };
+
+  const addCondition = () => {
+    setFormData((prev) => ({
+      ...prev,
+      conditions: [
+        ...prev.conditions,
+        {
+          id: crypto.randomUUID(),
+          metric: "",
+          operator: "",
+          value: "",
+          timeframe: "",
+          logicalOperator: prev.conditions.length > 0 ? "AND" : "",
+          timeRanges: []
+        },
+      ],
+    }));
+  };
+
+  const updateCondition = (id, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      conditions: prev.conditions.map((condition) => {
+        if (condition.id !== id) return condition;
+        
+        // Reset dependent fields when metric changes
+        if (field === "metric") {
+          return {
+            ...condition,
+            [field]: value,
+            operator: "",
+            value: "",
+            timeframe: "",
+            timeRanges: []
+          };
+        }
+        
+        return { ...condition, [field]: value };
+      }),
+    }));
+  };
+
+  const renderConditionValue = (condition) => {
+    const metric = conditionConfig.metrics[condition.metric];
+    if (!metric) return null;
+
+    switch (metric.valueType) {
+      case "number":
+        return (
+          <Input
+            type="number"
+            value={condition.value}
+            onChange={(e) => updateCondition(condition.id, "value", e.target.value)}
+            placeholder="Value"
+            className="w-1/4"
+          />
+        );
+      
+      case "timeRange":
+        return (
+          <div className="flex gap-2 items-center">
+            <TimePicker
+              value={condition.timeRanges[0]?.start || new Date()}
+              onChange={(value) => updateTimeRange(condition.id, 0, "start", value)}
+              label="Start"
+            />
+            <span>to</span>
+            <TimePicker
+              value={condition.timeRanges[0]?.end || new Date()}
+              onChange={(value) => updateTimeRange(condition.id, 0, "end", value)}
+              label="End"
+            />
+          </div>
+        );
+      
+      default:
+        return (
+          <Input
+            type="text"
+            value={condition.value}
+            onChange={(e) => updateCondition(condition.id, "value", e.target.value)}
+            placeholder="Value"
+            className="w-1/4"
+          />
+        );
+    }
+  };
+  const renderConditions = () => (
+    <div>
+      <div className="flex justify-between items-center mb-2">
+        <label className="block text-sm font-medium">Conditions</label>
+        <Button type="button" variant="outline" size="sm" onClick={addCondition}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Condition
+        </Button>
+      </div>
+      {formData.conditions.map((condition, index) => (
+        <div key={condition.id} className="space-y-2 mb-4">
+          {index > 0 && (
+            <Select
+              value={condition.logicalOperator}
+              onValueChange={(value) => updateCondition(condition.id, "logicalOperator", value)}
+            >
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="AND">AND</SelectItem>
+                <SelectItem value="OR">OR</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <div className="flex gap-2 items-center">
+            <Select
+              value={condition.metric}
+              onValueChange={(value) => updateCondition(condition.id, "metric", value)}
+            >
+              <SelectTrigger className="w-1/3">
+                <SelectValue placeholder="Select metric" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(conditionConfig.metrics).map(([key, config]) => (
+                  <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {condition.metric && (
+              <Select
+                value={condition.operator}
+                onValueChange={(value) => updateCondition(condition.id, "operator", value)}
+              >
+                <SelectTrigger className="w-1/3">
+                  <SelectValue placeholder="Select operator" />
+                </SelectTrigger>
+                <SelectContent>
+                  {conditionConfig.metrics[condition.metric].operators.map((op) => (
+                    <SelectItem key={op} value={op}>
+                      {conditionConfig.operators[op]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {condition.metric === "spend" && (
+              <Select
+                value={condition.timeframe}
+                onValueChange={(value) => updateCondition(condition.id, "timeframe", value)}
+              >
+                <SelectTrigger className="w-1/3">
+                  <SelectValue placeholder="Select timeframe" />
+                </SelectTrigger>
+                <SelectContent>
+                  {conditionConfig.metrics.spend.timeframes.map((timeframe) => (
+                    <SelectItem key={timeframe} value={timeframe}>
+                      {timeframe.replace("_", " ").toLowerCase()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {condition.operator && renderConditionValue(condition)}
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => removeCondition(condition.id)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const removeCondition = (id) => {
+    setFormData((prev) => ({
+      ...prev,
+      conditions: prev.conditions.filter(
+        (condition) => condition.id !== id
+      ),
+    }));
+  };
+
+  const addAction = () => {
+    setFormData((prev) => ({
+      ...prev,
+      actions: [
+        ...prev.actions,
+        { id: crypto.randomUUID(), type: "", value: "", target: "" },
+      ],
+    }));
+  };
+
+  const updateAction = (id, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      actions: prev.actions.map((action) =>
+        action.id === id ? { ...action, [field]: value } : action
+      ),
+    }));
+  };
+
+  const removeAction = (id) => {
+    setFormData((prev) => ({
+      ...prev,
+      actions: prev.actions.filter((action) => action.id !== id),
+    }));
+  };
+
+  const addTimeRange = () => {
+    const now = new Date();
+    const start = new Date(now.setHours(9, 0, 0));
+    const end = new Date(now.setHours(17, 0, 0));
+
+    setFormData(prev => ({
+      ...prev,
+      timeRanges: [
+        ...prev.timeRanges,
+        {
+          id: crypto.randomUUID(),
+          startTime: start,
+          endTime: end
+        }
+      ]
+    }));
+  };
+
+  const updateTimeRange = (id, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      timeRanges: prev.timeRanges.map(range =>
+        range.id === id ? { ...range, [field]: value } : range
+      )
+    }));
+  };
+
+
+  const removeTimeRange = (id) => {
+    setFormData(prev => ({
+      ...prev,
+      timeRanges: prev.timeRanges.filter(range => range.id !== id)
+    }));
+  };
+
+  // Enhanced action builder with new options
+  const getActionOptions = (actionType) => {
+    switch (actionType) {
+      case "change_budget":
+        return (
+          <>
+            <SelectItem value="increase_percent">Increase by %</SelectItem>
+            <SelectItem value="decrease_percent">Decrease by %</SelectItem>
+            <SelectItem value="increase_fixed">Increase by fixed amount</SelectItem>
+            <SelectItem value="decrease_fixed">Decrease by fixed amount</SelectItem>
+            <SelectItem value="set_fixed">Set to fixed amount</SelectItem>
+          </>
+        );
+      case "change_status":
+        return (
+          <>
+            <SelectItem value="active">Set Active</SelectItem>
+            <SelectItem value="paused">Set Paused</SelectItem>
+          </>
+        );
+      case "change_name":
+        return (
+          <>
+            <SelectItem value="prefix">Add prefix</SelectItem>
+            <SelectItem value="suffix">Add suffix</SelectItem>
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[600px] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Create New Rule</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Rule Name
+            </label>
+            <Input
+              value={formData.name}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  name: e.target.value,
+                }))
+              }
+              placeholder="Enter rule name"
+              required
+            />
+          </div>
+
+          {/* Target Level Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Target Level
+            </label>
+            <Select
+              value={formData.targetLevel}
+              onValueChange={(value) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  targetLevel: value,
+                  targetId: "", // Reset targetId when level changes
+                }));
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select target level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="campaign">Campaign</SelectItem>
+                <SelectItem value="adSet">Ad Set</SelectItem>
+                <SelectItem value="ad">Ad</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Dynamic Target Selection */}
+           <div>
+                    <label className="block text-sm font-medium mb-1">
+                        Target {formData.targetLevel}
+                    </label>
+                    <div className="relative">
+                        <Input 
+                            type="text"
+                            placeholder={`Search ${formData.targetLevel}`}
+                            value={searchTerm}
+                            onChange={(e) => handleSearch(e.target.value)}
+                            className="pr-10"
+                        />
+                        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    </div>
+                    <Select
+                        value={formData.targetId}
+                        onValueChange={(value) =>
+                            setFormData((prev) => ({
+                                ...prev,
+                                targetId: value,
+                            }))
+                        }
+                        disabled={loading}
+                    >
+                        <SelectTrigger className="mt-2">
+                            <SelectValue
+                                placeholder={
+                                    loading
+                                        ? "Loading..."
+                                        : `Select ${formData.targetLevel}`
+                                }
+                            />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {filteredOptions.map((option) => {
+                                switch (formData.targetLevel) {
+                                    case "campaign":
+                                        return (
+                                            <SelectItem
+                                                key={option._id}
+                                                value={option.campaignId}
+                                            >
+                                                {option.campaignName}
+                                            </SelectItem>
+                                        );
+                                    case "adSet":
+                                        return (
+                                            <SelectItem
+                                                key={option._id}
+                                                value={option.adSetId}
+                                            >
+                                                {option.adSetName}
+                                            </SelectItem>
+                                        );
+                                    case "ad":
+                                        return (
+                                            <SelectItem 
+                                                key={option._id} 
+                                                value={option.adId}
+                                            >
+                                                {option.adName}
+                                            </SelectItem>
+                                        );
+                                    default:
+                                        return null;
+                                }
+                            })}
+                        </SelectContent>
+                    </Select>
+                    {filteredOptions.length === 0 && (
+                        <p className="text-sm text-gray-500 mt-2">
+                            No {formData.targetLevel}s found matching your search.
+                        </p>
+                    )}
+                </div>
+          {renderConditions()}
+            {/* ACTION SECTION */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium">
+                Actions
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addAction}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Action
+              </Button>
+            </div>
+            {formData.actions.map((action) => (
+              <div
+                key={action.id}
+                className="flex gap-2 mb-2 items-center"
+              >
+                <Select
+                  value={action.type}
+                  onValueChange={(value) =>
+                    updateAction(action.id, "type", value)
+                  }
+                >
+                  <SelectTrigger className="w-1/3">
+                    <SelectValue placeholder="Select action" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="change_budget">Change Budget</SelectItem>
+                    <SelectItem value="change_status">Change Status</SelectItem>
+                    <SelectItem value="change_name">Change Name</SelectItem>
+                    <SelectItem value="change_bid">Change Bid</SelectItem>
+                    <SelectItem value="send_notification">Send Notification</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={action.value}
+                  onValueChange={(value) =>
+                    updateAction(action.id, "value", value)
+                  }
+                >
+                  <SelectTrigger className="w-1/3">
+                    <SelectValue placeholder="Select value" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getActionOptions(action.type)}
+                  </SelectContent>
+                </Select>
+
+                {/* Custom input based on action type */}
+                {(action.type === "change_budget" || action.type === "change_name") && (
+                  <Input
+                    type={action.type === "change_budget" ? "number" : "text"}
+                    value={action.customValue || ""}
+                    onChange={(e) =>
+                      updateAction(action.id, "customValue", e.target.value)
+                    }
+                    placeholder={
+                      action.type === "change_budget"
+                        ? "Enter amount"
+                        : "Enter text"
+                    }
+                    className="w-1/4"
+                  />
+                )}
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeAction(action.id)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+            {/* FREQUENCY SECTION */}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Frequency
+              </label>
+              <div className="flex gap-4">
+                <Select
+                  value={formData.frequency}
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      frequency: value,
+                    }));
+                    setShowTimeRange(["hourly", "daily", "weekly"].includes(value));
+                  }}
+                >
+                  <SelectTrigger className="w-1/2">
+                    <SelectValue placeholder="Select frequency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="minutes">Minutes</SelectItem>
+                    <SelectItem value="hourly">Hourly</SelectItem>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  value={formData.frequencyValue}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      frequencyValue: parseInt(e.target.value) || 1,
+                    }))
+                  }
+                  min="1"
+                  className="w-1/4"
+                />
+              </div>
+            </div>
+              {/* Time Range Selection */}
+              {showTimeRange && (
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium">
+                  Time Ranges
+                </label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addTimeRange}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Time Range
+                </Button>
+              </div>
+              {formData.timeRanges.map((range) => (
+                <div
+                  key={range.id}
+                  className="flex gap-2 mb-2 items-center"
+                >
+                  <TimePicker
+                    value={range.startTime}
+                    onChange={(value) =>
+                      updateTimeRange(range.id, "startTime", value)
+                    }
+                    label="Start Time"
+                  />
+                  <span>to</span>
+                  <TimePicker
+                    value={range.endTime}
+                    onChange={(value) =>
+                      updateTimeRange(range.id, "endTime", value)
+                    }
+                    label="End Time"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeTimeRange(range.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          </div>
+          
+
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit">Create Rule</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+CreateRuleForm.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+};
+
+export default CreateRuleForm;

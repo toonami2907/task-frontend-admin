@@ -23,6 +23,7 @@ import { API_URL, useGlobalContext } from "@/functions/features/StateProvider";
 import { formatCurrency } from "@/hooks/func";
 import toast from "react-hot-toast";
 import { ErrorToast } from "@/hooks/customToast";
+import api from "@/functions/resources/axiosConfig";
 
 const Ads = ({
   previewImage,
@@ -91,7 +92,7 @@ const Ads = ({
   const handleStatusChange = async (adId, newStatus) => {
     try {
       const endpoint = `${API_URL}/auth/pause/ads/${adId}`;
-      await axios.post(endpoint, { status: newStatus });
+      await api.post(endpoint, { status: newStatus },{withCredentials:true});
       console.log(`Ad ${adId} status updated to ${newStatus}`);
 
       setAdsData((prevAds) =>
@@ -105,7 +106,7 @@ const Ads = ({
   };
   const handleNameUpdate = async (adId, newName) => {
     try {
-      await axios.post(`${API_URL}/auth/update/ads`, {
+      await api.post(`${API_URL}/auth/update/ads`, {
         adId,
         newName,
       });
@@ -352,6 +353,8 @@ const Ads = ({
                           return ads.campaignId;
                         case "Correct Purchases":
                           return ads.matchedOrders ? ads.matchedOrders.length : 0;
+                        case "New customer CPA ":
+                          return ads.newCustomerCpa || 0;
                         case "Budget":
                           if (ads.objective === "OUTCOME_ENGAGEMENT") {
                             return "Using campaign budget";
@@ -362,6 +365,12 @@ const Ads = ({
 
                         case "URL parameters":
                           return ads.creative?.urlTags;
+                        case "Impressions":
+                          return ads.insights?.impressions || 0;
+                        case "Reach":
+                          return ads.insights?.reach || 0;
+                        case "Link clicks":
+                          return ads.insights?.clicks || 0;
                         case "Audience location (Ad set settings)":
                           return "NG";
                         case "Objective":
@@ -445,8 +454,7 @@ const Ads = ({
             <div className="space-y-4 h-[300px]">
               <img
                 src={
-                  (previewImage.creative && previewImage.creative?.imageUrl) ||
-                  previewImage.creative?.thumbnailUrl
+                  previewImage.creative && previewImage.creative?.imageUrl || previewImage.creative?.thumbnailUrl 
                 }
                 alt={previewImage.adName}
                 className="w-full h-[250px] object-cover object-center bg-gray-50 rounded"

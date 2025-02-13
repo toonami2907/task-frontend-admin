@@ -1,0 +1,148 @@
+import React, { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
+
+export const MailComposer = () => {
+  const [selectedEmails, setSelectedEmails] = useState([])
+  const [mailData, setMailData] = useState({
+    subject: '',
+    content: '',
+    utm_source: '',
+    utm_medium: '',
+    utm_campaign: ''
+  })
+
+  // Demo email list - replace with actual user emails
+  const userEmails = [
+    { id: 1, email: 'user1@example.com' },
+    { id: 2, email: 'user2@example.com' },
+    { id: 3, email: 'user3@example.com' }
+  ]
+
+  const handleEmailSelect = (email) => {
+    setSelectedEmails(prev => 
+      prev.includes(email) 
+        ? prev.filter(e => e !== email)
+        : [...prev, email]
+    )
+  }
+
+  const handleInputChange = (e) => {
+    setMailData({
+      ...mailData,
+      [e.target.name]: e.target.value
+    })
+  }
+
+  const handleSendMail = () => {
+    const mailPayload = {
+      recipients: selectedEmails,
+      ...mailData
+    }
+    console.log('Sending mail:', mailPayload)
+  }
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      <h2 className="text-3xl font-bold mb-6">Email Campaign Composer</h2>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Select Recipients</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[200px] mb-4">
+            {userEmails.map((user) => (
+              <div key={user.id} className="flex items-center space-x-2 p-2">
+                <Checkbox
+                  checked={selectedEmails.includes(user.email)}
+                  onCheckedChange={() => handleEmailSelect(user.email)}
+                />
+                <span>{user.email}</span>
+              </div>
+            ))}
+          </ScrollArea>
+
+          <div className="mb-4">
+            <h4 className="text-sm font-medium mb-2">Selected Recipients:</h4>
+            <div className="flex flex-wrap gap-2">
+              {selectedEmails.map((email) => (
+                <Badge 
+                  key={email}
+                  variant="secondary"
+                  className="cursor-pointer"
+                  onClick={() => handleEmailSelect(email)}
+                >
+                  {email} ×
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <div className="space-y-2">
+            <Input
+              name="subject"
+              placeholder="Email Subject"
+              value={mailData.subject}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Textarea
+              name="content"
+              placeholder="Email Content"
+              className="min-h-[150px]"
+              value={mailData.content}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">UTM Parameters</h3>
+            
+            <Input
+              name="utm_source"
+              placeholder="UTM Source"
+              value={mailData.utm_source}
+              onChange={handleInputChange}
+            />
+
+            <Input
+              name="utm_medium"
+              placeholder="UTM Medium"
+              value={mailData.utm_medium}
+              onChange={handleInputChange}
+            />
+
+            <Input
+              name="utm_campaign"
+              placeholder="UTM Campaign"
+              value={mailData.utm_campaign}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <Button 
+            className="w-full"
+            disabled={selectedEmails.length === 0 || !mailData.subject || !mailData.content}
+            onClick={handleSendMail}
+          >
+            Send Email Campaign
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+export default MailComposer

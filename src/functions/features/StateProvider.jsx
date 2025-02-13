@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { sortPresets } from "@/functions/Preset";
 import api from "../resources/axiosConfig";
+import PropTypes from 'prop-types';
 
 
 
@@ -61,6 +62,21 @@ export default function StateProvider({ children }) {
   const [selectedAdAccount, setSelectedAdAccount] = useState(null);
   const [userInfo, setUserInfo] = useState({});
   const [customColumn, setCustomColumn] = useState();
+  const [plans, setPlans] = useState([]);
+
+// Add this fetchPlans function alongside other fetch functions
+const fetchPlans = useCallback(async () => {
+  setLoading(true);
+  try {
+    const response = await api.get(`/api/plan/plans`, { withCredentials: true });
+
+    setPlans(response.data.data);
+  } catch (error) {
+    console.error("Error fetching plans:", error.message);
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
 const updateSelectedAdAccount = (account) => {
   setSelectedAdAccount(account);
@@ -72,9 +88,9 @@ const updateSelectedAdAccount = (account) => {
     facebook: false,
   });
  
-  console.log('selectedAdAccount', selectedAdAccount)
 
   useEffect(() => {
+    fetchPlans()
   const act_id =  localStorage.getItem('Adsaccount')
   if (act_id) {
     setSelectedAdAccount(act_id)
@@ -94,8 +110,6 @@ const updateSelectedAdAccount = (account) => {
         shopify: user.isShopifyConnected || false,
         facebook: user.isFacebookConnected || false,
       }));
-
-      console.log("User info fetched successfully:", user);
     } catch (error) {
       console.error("Error while connecting platform:", error.message);
     }
@@ -103,28 +117,40 @@ const updateSelectedAdAccount = (account) => {
 
 
 
-
   
-  const fetchAds = useCallback(async () => {
-    setLoading(true);
-
+  const fetchAds = useCallback(async (dateRange) => {
+    setLoading(true)
+    
+    // Default to today's date if no dateRange provided
+    const today = new Date().toISOString().split('T')[0]
+    const dates = dateRange || {
+      startDate: today,
+      endDate: today
+    }
+  
     try {
-      await api.get("/auth/fetchOrder", { withCredentials: true });
+      await api.get("/auth/fetchOrder", { withCredentials: true })
       if (selectedAdAccount) {
         await api.post(`${API_URL}/auth/ads`, { 
-          FACEBOOK_ADS_ACT_ID: selectedAdAccount.id 
-        });
+          FACEBOOK_ADS_ACT_ID: selectedAdAccount.id,
+          startDate: dates.startDate,
+          endDate: dates.endDate
+        })
       } else {
-        await api.post(`${API_URL}/auth/ads`);
+        await api.post(`${API_URL}/auth/ads`, {
+          startDate: dates.startDate,
+          endDate: dates.endDate
+        })
       }
-      console.log("Ads fetched successfully");
     } catch (error) {
-      console.error("Error fetching ads:", error.message);
+      console.error("Error fetching ads:", error.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [selectedAdAccount]);
-
+  }, [selectedAdAccount])
+  
+  
+  
   // Initialize customColumn from localStorage and set up presets
   useEffect(() => {
     const storedCustomColumn = localStorage.getItem("customColumn");
@@ -160,6 +186,8 @@ const updateSelectedAdAccount = (account) => {
         selectedBar,
         setSelectedBar,
         selectedBarData,
+        plans,
+        fetchPlans,
         selectedAdAccount,
         updateSelectedAdAccount,
         setSelectedBarData,
@@ -176,6 +204,10 @@ const updateSelectedAdAccount = (account) => {
     </StateContext.Provider>
   );
 }
+
+StateProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};
 
 export const useGlobalContext = () => {
   const context = useContext(StateContext);

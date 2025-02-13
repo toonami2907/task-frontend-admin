@@ -20,8 +20,8 @@ const SelectState = ({ state, setState, handleStateStatus, campaign, ads, adset,
       }}
       disabled={isDisabled}
     >
-      <SelectTrigger className="w-32 border border-black disabled:border-gray-400">
-        <SelectValue placeholder="Off/On" />
+      <SelectTrigger className="w-28 text-xs border border-black disabled:border-gray-400">
+        <SelectValue placeholder=" Turn Off/On" />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="ON">On</SelectItem>

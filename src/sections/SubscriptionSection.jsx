@@ -30,7 +30,7 @@ const SubscriptionSection = ({ userInfo, colors }) => {
         "Email Support",
         "Standard Reports"
       ],
-      current: !userInfo?.subscription
+      current: !userInfo?.plan
     },
     {
       name: "Pro",
@@ -44,7 +44,7 @@ const SubscriptionSection = ({ userInfo, colors }) => {
         "API Access",
         "Team Collaboration"
       ],
-      current: userInfo?.subscription?.plan === "pro"
+      current: userInfo?.plan === "pro"
     },
     {
       name: "Enterprise",
@@ -59,7 +59,7 @@ const SubscriptionSection = ({ userInfo, colors }) => {
         "Advanced API Access",
         "Team Management"
       ],
-      current: userInfo?.subscription?.plan === "enterprise"
+      current: userInfo?.plan === "enterprise"
     }
   ];
 

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar1 } from "lucide-react";
+import { useGlobalContext } from "@/functions/features/StateProvider";
 
 const AdsCalendarDialog = () => {
   const today = new Date();
@@ -29,6 +30,7 @@ const AdsCalendarDialog = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [compare, setCompare] = React.useState(false);
   const [customRange, setCustomRange] = React.useState("custom");
+  const { fetchAds } = useGlobalContext()
   const [dateRange, setDateRange] = React.useState({
     startDate: new Date(),
     endDate: new Date()
@@ -53,7 +55,6 @@ const AdsCalendarDialog = () => {
   
     return () => clearInterval(interval);
   }, [selectedRange]);
-
   const timeRanges = [
     { label: "Today", value: "today" },
     { label: "Yesterday", value: "yesterday" },
@@ -131,14 +132,18 @@ const AdsCalendarDialog = () => {
   };
 
   const handleUpdate = () => {
-    console.log("Selected date range:", {
-      range: selectedRange,
-      dates: date,
-      compare: compare,
-      customRange: customRange,
-    });
-    setIsOpen(false);
-  };
+    const formatDate = (date) => {
+      return date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+    }
+  
+    const dateRange = {
+      startDate: formatDate(date.from),
+      endDate: formatDate(date.to)
+    }
+    fetchAds(dateRange)
+    setIsOpen(false)
+  }
+  
 
   const handleCancel = () => {
     setIsOpen(false);
@@ -151,11 +156,11 @@ const AdsCalendarDialog = () => {
       <DialogTrigger asChild>
         <Button variant="outline" className="flex items-center gap-2 px-2 py-1.5 text-xs sm:text-sm">
           <Calendar1 className="h-4 w-4" />
-          <span className="hidden sm:inline font-normal text-black">
+          <span className="hidden sm:inline font-normal text-xs text-black">
             {date.from.toLocaleDateString("en-US", options)} -{" "}
             {date.to.toLocaleDateString("en-US", options)}
           </span>
-          <span className="sm:hidden">
+          <span className="sm:hidden text-xs">
             {date.from.toLocaleDateString("en-US", { month: "short", day: "numeric" })} -{" "}
             {date.to.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </span>

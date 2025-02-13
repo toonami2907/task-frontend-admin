@@ -7,6 +7,7 @@ import {
   Settings, 
   Activity, 
   TrendingUp, 
+  ScrollText ,
   Users
 } from "lucide-react"
 
@@ -34,93 +35,30 @@ export function AppSidebar({
     user: {
       name: userInfo.name,
       email: userInfo.email,
-      avatar: "/avatars/shadcn.jpg",
+      avatar: userInfo.profilePic,
     },
-    teams: [
-      {
-        name: "UTM TRACKER",
-        logo: BarChart2,
-        plan: "Test",
-      },
-      {
-        name: "Utm tracker.",
-        logo: TrendingUp,
-        plan: "Startup",
-      },
-      {
-        name: "Evil Corp.",
-        logo: Users,
-        plan: "Free",
-      },
-    ],
     navMain: [
       {
         title: "Dashboard",
-        url: "#",
+        url: "/",
         icon: SquareTerminal,
         isActive: true,
         items: [],
       },
       {
-        title: "Campaigns",
-        url: "#",
-        icon: Activity,
+        title: "Rules",
+        url: "/rules",
+        icon: ScrollText,
         items: [
           {
-            title: "Active Campaigns",
-            url: "#",
-          },
-          {
-            title: "Paused Campaigns",
-            url: "#",
-          },
-          {
-            title: "Archived Campaigns",
-            url: "#",
-          },
-        ],
-      },
-      {
-        title: "Analytics",
-        url: "#",
-        icon: BarChart2,
-        items: [
-          {
-            title: "Overview",
-            url: "#",
-          },
-          {
-            title: "UTM Tracking",
-            url: "#",
-          },
-          {
-            title: "Ad Performance",
-            url: "#",
-          },
-        ],
-      },
-      {
-        title: "Orders",
-        url: "#",
-        icon: ShoppingCart,
-        items: [
-          {
-            title: "All Orders",
-            url: "#",
-          },
-          {
-            title: "New Orders",
-            url: "#",
-          },
-          {
-            title: "Order Analytics",
-            url: "#",
+            title: "Manage Rules",
+            url: "/rules",
           },
         ],
       },
       {
         title: "Settings",
-        url: "#",
+        url: "/user/account",
         icon: Settings,
         items: [
           {
@@ -160,15 +98,11 @@ export function AppSidebar({
   return (
     (<Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+      <NavUser user={data.user} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={data.user} />
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>)
   );

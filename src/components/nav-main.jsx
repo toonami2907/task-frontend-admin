@@ -17,13 +17,13 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export function NavMain({
   items
 }) {
 
-  const naviagte = useNavigate() 
+
   return (
     (<SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
@@ -38,26 +38,23 @@ export function NavMain({
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton tooltip={item.title}>
                   {item.icon && <item.icon />}
-                  <span 
-                  onClick={()=>{
-                    if(item.title === 'Dashboard'){
-                      naviagte("/")
-                    }
-                  }
-                }
-                  >{item.title}</span>
+                  {item.title === "Dashboard" ? (
+                    <Link to={"/"}>{item.title}</Link>
+                  ) : (
+                    <span>{item.title}</span>
+                  )}
                   <ChevronRight
-                    className="ml-auto transition-transform duration-200  group-data-[state=open]/collapsible:rotate-90" />
+                    className={`ml-auto transition-transform duration-200  group-data-[state=open]/collapsible:rotate-90 ${item.title === 'Dashboard' && 'hidden'}`} />
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <SidebarMenuSub>
+                <SidebarMenuSub className={`${item.title === 'Dashboard' && 'hidden'}`}>
                   {item.items?.map((subItem) => (
                     <SidebarMenuSubItem key={subItem.title}>
                       <SidebarMenuSubButton asChild>
-                        <a href={subItem.url}>
+                        <Link to={subItem.url}>
                           <span>{subItem.title}</span>
-                        </a>
+                        </Link>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   ))}

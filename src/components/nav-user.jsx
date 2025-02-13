@@ -1,11 +1,8 @@
 /* eslint-disable react/prop-types */
-"use client"
 
 import {
   BadgeCheck,
-  Bell,
   ChevronsUpDown,
-  CreditCard,
   LogOut,
   Sparkles,
 } from "lucide-react"
@@ -31,13 +28,13 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { handleLogout, useGlobalContext } from "@/functions/features/StateProvider"
-import { useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 
 export function NavUser({
   user
 }) {
   const { isMobile } = useSidebar() 
-  const naviagte = useNavigate() 
+
   const {userInfo} = useGlobalContext()
 
   return (
@@ -67,32 +64,34 @@ export function NavUser({
             <DropdownMenuLabel className="p-0 ">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  <img src={user.avatar} alt={user.name} />
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{userInfo.name}</span>
-                  <span className="truncate text-xs">{userInfo.email}</span>
+                  <span className="truncate text-gray-700 text-xs">{userInfo.email}</span>
+                  <span className="truncate text-blue-500 text-xs">  {userInfo.plan}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+              <Link to={'/billing/pricing'}>
               <DropdownMenuItem
-               onClick={()=>naviagte('/billing/pricing')}
               >
                 <Sparkles />
                 Upgrade plan
               </DropdownMenuItem>
+              </Link>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+            <Link to={'/user/account'}>
               <DropdownMenuItem
-               onClick={()=>naviagte('/user/account')}
               >
                 <BadgeCheck />
                 Account
               </DropdownMenuItem>
+              </Link>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem 

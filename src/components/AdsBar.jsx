@@ -51,7 +51,6 @@ const AdsManager = ({
   const [adsLoading, setAdsLoading] = useState(false);
   const [editingName, setEditingName] = useState("");
   const [updatingSwitches, setUpdatingSwitches] = useState(new Set());
-  const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [isCampaignFilterLoading, setIsCampaignFilterLoading] =
     useState(false);
   const [editingBudgetAdSetId, setEditingBudgetAdSetId] =
@@ -92,7 +91,6 @@ const AdsManager = ({
         const response = await api.get(endpoint, {
           withCredentials: true,
         });
-        console.log('data', response.data)
         setOriginalData(response.data);
         setFetchData(response.data);
       } catch (error) {
@@ -546,92 +544,90 @@ const AdsManager = ({
       }
     }
   };
-
-  const handleStateStatus = async (action) => {
-    const statusMap = {
-      Campaign: {
-        ids: SelectedCamapiagn,
-        endpoint: `/auth/pause/status/campaigns`,
-        idField: "campaignIds",
-        entityName: "Campaign",
-        idKey: "campaignId",
-      },
-      "Ads Set": {
-        ids: selectedBar,
-        endpoint: `/auth/pause/status/AdSets`,
-        idField: "adSetIds",
-        entityName: "Ads set",
-        idKey: "adSetId",
-      },
-      Ads: {
-        ids: adsSelectedBar,
-        endpoint: `/auth/pause/status/Ads`,
-        idField: "adIds",
-        entityName: "Ads",
-        idKey: "adId",
-      },
-    };
-
-    const entityConfig = statusMap[state];
-    if (!entityConfig) {
-      setAdsLoading(!adsLoading);
-      return;
-    }
-
-    if (entityConfig.entityName === "Ads") {
-      setAdsLoading(true);
-    }
-
-    if (!entityConfig.ids?.length) {
-      ErrorToast(`Please select ${entityConfig.entityName}(s) first`);
-      return;
-    }
-
-    console.log("action", action);
-    const status = action === "On" ? "ACTIVE" : "PAUSED";
-    setDisableState(action);
-
-    try {
-      const payload = {
-        status,
-        [entityConfig.idField]: entityConfig.ids,
+    const handleStateStatus = async (action) => {
+      const statusMap = {
+        Campaign: {
+          ids: SelectedCamapiagn,
+          endpoint: `/auth/pause/status/campaigns`,
+          idField: "campaignIds",
+          entityName: "Campaign",
+          idKey: "campaignId",
+        },
+        "Ads Set": {
+          ids: selectedBar,
+          endpoint: `/auth/pause/status/AdSets`,
+          idField: "adSetIds", 
+          entityName: "Ads set",
+          idKey: "adSetId",
+        },
+        Ads: {
+          ids: adsSelectedBar,
+          endpoint: `/auth/pause/status/Ads`,
+          idField: "adIds",
+          entityName: "Ads",
+          idKey: "adId", 
+        },
       };
 
-      const response = await api.post(
-        entityConfig.endpoint,
-        payload
-      );
+      const entityConfig = statusMap[state];
+      if (!entityConfig) {
+        setAdsLoading(!adsLoading);
+        return;
+      }
 
-      if (response.status === 200) {
-        fetchAds();
-        toast.success(
-          `${
-            entityConfig.entityName
-          } status changed to ${status.toLowerCase()} successfully`
+      if (entityConfig.entityName === "Ads") {
+        setAdsLoading(true);
+      }
+
+      if (!entityConfig.ids?.length) {
+        ErrorToast(`Please select ${entityConfig.entityName}(s) first`);
+        return;
+      }
+
+      console.log("action", action);
+      const status = action === "On" ? "ACTIVE" : "PAUSED";
+      setDisableState(action);
+
+      try {
+        const payload = {
+          status,
+          [entityConfig.idField]: entityConfig.ids,
+        };
+
+        const response = await api.post(
+          entityConfig.endpoint,
+          payload
         );
+
+        if (response.status === 200) {
+          fetchAds();
+          toast.success(
+            `${
+              entityConfig.entityName
+            } status changed to ${status.toLowerCase()} successfully`
+          );
+          if (entityConfig.entityName === "Ads") {
+            setAdsLoading(false);
+          }
+        }
+      } catch (error) {
+        // Revert the disable state on error
+        setDisableState(action === "On" ? "Off" : "On");
+
         if (entityConfig.entityName === "Ads") {
           setAdsLoading(false);
         }
+
+        toast.error(
+          `Error changing ${entityConfig.entityName.toLowerCase()} status: ${
+            error.message
+          }`
+        );
+      } finally {
+        // Clear the disable state after completion
+        setDisableState("");
       }
-    } catch (error) {
-      // Revert the disable state on error
-      setDisableState(action === "On" ? "Off" : "On");
-
-      if (entityConfig.entityName === "Ads") {
-        setAdsLoading(false);
-      }
-
-      toast.error(
-        `Error changing ${entityConfig.entityName.toLowerCase()} status: ${
-          error.message
-        }`
-      );
-    } finally {
-      // Clear the disable state after completion
-      setDisableState("");
-    }
-  };
-
+    };
   return (
     <div className="w-full py-4 bg-inherit px-0 font-sans">
          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-2">

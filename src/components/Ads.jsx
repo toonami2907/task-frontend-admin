@@ -1,6 +1,5 @@
 /* eslint-disable react/prop-types */
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import {
   Table,
   TableBody,
@@ -9,21 +8,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { LinkPreview } from "@dhaiwat10/react-link-preview";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
 import { Switch } from "./ui/switch";
 import { Checkbox } from "./ui/checkbox";
 import { Link, Pen } from "lucide-react";
 import NoAd from "./NoAd";
-import { API_URL, useGlobalContext } from "@/functions/features/StateProvider";
+import {
+  API_URL,
+  useGlobalContext,
+} from "@/functions/features/StateProvider";
 import { formatCurrency } from "@/hooks/func";
-import toast from "react-hot-toast";
 import { ErrorToast } from "@/hooks/customToast";
 import api from "@/functions/resources/axiosConfig";
+import { ResizableTable } from "./ResizableTable";
 
 const Ads = ({
   previewImage,
@@ -85,14 +81,20 @@ const Ads = ({
       ...selectedAds,
       [adId]: checked,
     };
-    const allSelected = adsData.every((ad) => updatedSelected[ad.adId]);
+    const allSelected = adsData.every(
+      (ad) => updatedSelected[ad.adId]
+    );
     setSelectAll(allSelected);
   };
 
   const handleStatusChange = async (adId, newStatus) => {
     try {
       const endpoint = `${API_URL}/auth/pause/ads/${adId}`;
-      await api.post(endpoint, { status: newStatus },{withCredentials:true});
+      await api.post(
+        endpoint,
+        { status: newStatus },
+        { withCredentials: true }
+      );
       console.log(`Ad ${adId} status updated to ${newStatus}`);
 
       setAdsData((prevAds) =>
@@ -100,8 +102,12 @@ const Ads = ({
           ad.adId === adId ? { ...ad, status: newStatus } : ad
         )
       );
+      fetchAds()
     } catch (error) {
-      console.error(`Failed to update Ad ${adId} status:`, error.message);
+      console.error(
+        `Failed to update Ad ${adId} status:`,
+        error.message
+      );
     }
   };
   const handleNameUpdate = async (adId, newName) => {
@@ -126,7 +132,6 @@ const Ads = ({
   // Update local state when prop changes
   useEffect(() => {
     setAdsData(initialAdsData);
-    // Reset selection state when data changes
     setSelectedAds({});
     setSelectAll(false);
   }, [initialAdsData]);
@@ -143,7 +148,9 @@ const Ads = ({
     }
 
     // Get only ad name filters
-    const adFilters = activeFilters.filter((rule) => rule.field === "ad_name");
+    const adFilters = activeFilters.filter(
+      (rule) => rule.field === "ad_name"
+    );
 
     // If no ad filters, return original data
     if (adFilters.length === 0) {
@@ -182,7 +189,6 @@ const Ads = ({
     return pixelSpec?.fb_pixel || [];
   };
 
-
   if (!adsData || adsData.length === 0) {
     return <NoAd />;
   }
@@ -191,31 +197,35 @@ const Ads = ({
     <div>
       <div className="relative flex">
         <div className="flex-grow overflow-x-auto w-full b">
-          <Table>
+          <ResizableTable className="ads-table">
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead className="min-w-12 select-none ">
+                <TableHead className="w-[50px] min-w-[50px]">
                   <Checkbox
                     checked={selectAll}
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
-                <TableHead className="min-w-20 select-none border-r">
+                <TableHead className="w-[80px] min-w-[80px] border-r">
                   <div className="flex text-color text-xs font-bold items-center">
-                   status
+                    status
                   </div>
                 </TableHead>
-                <TableHead className="text-xs font-bold min-w-[200px] select-none border-r">
-                  <div className="text-color overflow-hidden">Ads</div>
+                <TableHead className="w-[270px] min-w-[400px] text-xs font-bold select-none border-r">
+                  <div className="text-color overflow-hidden">
+                    Ads
+                  </div>
                 </TableHead>
                 {customColumn.map((col, idx) => (
                   <TableHead
                     key={idx}
-                    className={`font-bold text-xs select-none ${
-                      idx !== customColumn.length - 1 ? "border-r" : ""
+                    className={`w-[180px] min-w-[180px] font-bold text-xs select-none ${
+                      idx !== customColumn.length - 1
+                        ? "border-r"
+                        : ""
                     }`}
                   >
-                    <div className="resize-x text-color overflow-hidden min-w-[120px]">
+                    <div className="text-color overflow-hidden">
                       {col}
                     </div>
                   </TableHead>
@@ -244,14 +254,17 @@ const Ads = ({
                     <Switch
                       checked={
                         adsSelectedBar.includes(ads.adId) &&
-                        (disableState === "On" || disableState === "Off")
+                        (disableState === "On" ||
+                          disableState === "Off")
                           ? disableState === "On"
                           : ads.status === "ACTIVE"
                       }
                       onCheckedChange={(checked) => {
                         if (
-                          (ads.status === "ACTIVE" && disableState === "On") ||
-                          (ads.status === "PAUSED" && disableState === "Off")
+                          (ads.status === "ACTIVE" &&
+                            disableState === "On") ||
+                          (ads.status === "PAUSED" &&
+                            disableState === "Off")
                         ) {
                           ErrorToast(
                             `Ads status is ${disableState}, no change needed.`
@@ -273,8 +286,11 @@ const Ads = ({
                         onMouseEnter={() => setPreviewImage(ads)}
                       >
                         <img
-                          src={ads.creative?.imageUrl ?  ads.creative.imageUrl :  ads.creative?.
-                            thumbnailUrl                         }
+                          src={
+                            ads.creative?.imageUrl
+                              ? ads.creative.imageUrl
+                              : ads.creative?.thumbnailUrl
+                          }
                           alt={ads.adName}
                           className="h-8 max-w-8 object-cover rounded hover:ring-2 hover:ring-blue-500"
                         />
@@ -288,10 +304,15 @@ const Ads = ({
                             <input
                               type="text"
                               value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
+                              onChange={(e) =>
+                                setEditingName(e.target.value)
+                              }
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
-                                  handleNameUpdate(ads.adId, editingName);
+                                  handleNameUpdate(
+                                    ads.adId,
+                                    editingName
+                                  );
                                 }
                                 if (e.key === "Escape") {
                                   handleCancel();
@@ -310,7 +331,10 @@ const Ads = ({
                               </button>
                               <button
                                 onClick={() =>
-                                  handleNameUpdate(ads.adId, editingName)
+                                  handleNameUpdate(
+                                    ads.adId,
+                                    editingName
+                                  )
                                 }
                                 className="w-1/2 bg-blue-500 text-white rounded py-1 text-sm hover:bg-blue-600"
                               >
@@ -352,11 +376,15 @@ const Ads = ({
                         case "Campaign ID":
                           return ads.campaignId;
                         case "Correct Purchases":
-                          return ads.matchedOrders ? ads.matchedOrders.length : 0;
+                          return ads.matchedOrders
+                            ? ads.matchedOrders.length
+                            : 0;
                         case "New customer CPA ":
                           return ads.newCustomerCpa || 0;
                         case "Budget":
-                          if (ads.objective === "OUTCOME_ENGAGEMENT") {
+                          if (
+                            ads.objective === "OUTCOME_ENGAGEMENT"
+                          ) {
                             return "Using campaign budget";
                           }
                           return ads.dailyBudget
@@ -374,17 +402,25 @@ const Ads = ({
                         case "Audience location (Ad set settings)":
                           return "NG";
                         case "Objective":
-                          return ads.objective?.substring(8).toLowerCase();
+                          return ads.objective
+                            ?.substring(8)
+                            .toLowerCase();
                         case "Meta Pixel": {
-                          const pixels = getFbPixel(ads.trackingSpecs);
+                          const pixels = getFbPixel(
+                            ads.trackingSpecs
+                          );
                           return (
                             <div className="flex flex-wrap gap-1">
                               {pixels.length > 0 ? (
                                 pixels.map((pixel, index) => (
-                                  <span key={index}>(ID:{pixel})</span>
+                                  <span key={index}>
+                                    (ID:{pixel})
+                                  </span>
                                 ))
                               ) : (
-                                <span className="text-gray-400">—</span>
+                                <span className="text-gray-400">
+                                  —
+                                </span>
                               )}
                             </div>
                           );
@@ -393,8 +429,8 @@ const Ads = ({
                           return ads.preview_shareable_link;
                         case "Link (ad settings)":
                           return (
-                            ads.creative?.objectStorySpec?.link_data?.link ||
-                            "—"
+                            ads.creative?.objectStorySpec?.link_data
+                              ?.link || "—"
                           );
                         case "Campaign name":
                           return ads.campaignName || "—";
@@ -432,7 +468,9 @@ const Ads = ({
                       <TableCell
                         key={idx}
                         className={`font-sans text-xs max-w-[120px] ${
-                          idx !== customColumn.length - 1 ? "border-r" : ""
+                          idx !== customColumn.length - 1
+                            ? "border-r"
+                            : ""
                         }`}
                       >
                         <div className="truncate">
@@ -444,7 +482,7 @@ const Ads = ({
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </ResizableTable>
         </div>
         {previewImage && (
           <div
@@ -454,7 +492,9 @@ const Ads = ({
             <div className="space-y-4 h-[300px]">
               <img
                 src={
-                  previewImage.creative && previewImage.creative?.imageUrl || previewImage.creative?.thumbnailUrl 
+                  (previewImage.creative &&
+                    previewImage.creative?.imageUrl) ||
+                  previewImage.creative?.thumbnailUrl
                 }
                 alt={previewImage.adName}
                 className="w-full h-[250px] object-cover object-center bg-gray-50 rounded"
@@ -465,7 +505,9 @@ const Ads = ({
                 }}
               />
               <div className="space-y-2">
-                <h3 className="font-medium text-sm">{previewImage.adName}</h3>
+                <h3 className="font-medium text-sm">
+                  {previewImage.adName}
+                </h3>
                 {getAdLink(previewImage) && (
                   <div className="mt-2 p-2 bg-gray-50 rounded">
                     <div className="flex items-center gap-2 text-blue-600">

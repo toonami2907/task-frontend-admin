@@ -57,6 +57,22 @@ export function AppSidebar({
         ],
       },
       {
+        title: "Analytics",
+        url: "#",
+        icon: BarChart2,
+        items: [
+          {
+            title: "Orders",
+            url: "/report/orders",
+          },
+          {
+            title: "Purchases",
+            url: "/report/purchases",
+          },
+         
+        ],
+      },
+      {
         title: "Settings",
         url: "/user/account",
         icon: Settings,

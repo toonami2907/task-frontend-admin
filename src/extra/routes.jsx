@@ -34,6 +34,8 @@ import { SubscriptionSuccess } from "@/pages/subscription/success";
 import { SubscriptionCancel } from "@/pages/subscription/cancel";
 import FAQs from "@/pages/FAQs";
 import ManageFAQs from "@/pages/Admin/FAQs/ManageFAQs";
+import { PurchaseReport } from "@/pages/Reports/PurchaseReport";
+import { DetailedOrders } from "@/pages/Reports/DetailedOrders";
 
 
 const ProtectedRoute = ({ children }) => {
@@ -58,6 +60,8 @@ const AdminPublicRoute = ({ children }) => {
 
 const App = lazy(() => import("../App"));
 const PlatformConnectionPage = lazy(() => import("@/components/PlatformConnector"));
+// const DetailedOrders = lazy(() => import("@/pages/Reports/DetailedOrders"));
+// const PurchaseReport = lazy(() => import("@/pages/Reports/PurchaseReport"));
 const PricingDetailsPage = lazy(() => import("@/pages/PricingDetailsPage"));
 
 const UserRoutes = () => (
@@ -99,6 +103,8 @@ const UserRoutes = () => (
           <Route path="/billing/pricing" element={<ProtectedRoute><PricingPage /></ProtectedRoute>} />
           <Route path="/user/platform" element={<ProtectedRoute><PlatformConnectionPage /></ProtectedRoute>} />
           <Route path="/facebook/callback" element={<ProtectedRoute><FacebookCallback /></ProtectedRoute>} />
+          <Route path="/report/orders" element={<ProtectedRoute><DetailedOrders /></ProtectedRoute>} />
+          <Route path="/report/purchases" element={<ProtectedRoute><PurchaseReport /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

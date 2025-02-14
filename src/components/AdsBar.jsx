@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ErrorToast } from "@/hooks/customToast";
+import { cn } from "@/lib/utils";
 import {
   API_URL,
   useGlobalContext,
@@ -30,7 +31,7 @@ import { formatCurrency } from "@/hooks/func";
 import { formatDate } from "@/functions/resources";
 import SelectState from "@/components/SelectState";
 import api from "@/functions/resources/axiosConfig";
-
+import { ResizableTable } from "./ResizableTable";
 
 const AdsManager = ({
   selectedBar,
@@ -43,7 +44,7 @@ const AdsManager = ({
   const [selectedAds, setSelectedAds] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { state, customColumn,loading, activeFilters, fetchAds } =
+  const { state, customColumn, loading, activeFilters, fetchAds } =
     useGlobalContext();
   const [originalData, setOriginalData] = useState([]);
   const [editingAdSetId, setEditingAdSetId] = useState(null);
@@ -60,9 +61,9 @@ const AdsManager = ({
 
   const LoadingSpinner = () => (
     <div className="flex flex-col items-center justify-center w-full py-8 space-y-2">
-    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-    <p className="text-sm text-gray-600">Loading ads data...</p>
-  </div>
+      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <p className="text-sm text-gray-600">Loading ads data...</p>
+    </div>
   );
   const handleCancel = () => {
     setEditingAdSetId(null);
@@ -109,13 +110,10 @@ const AdsManager = ({
 
   const handleAdSetNameUpdate = async (adSetId, newName) => {
     try {
-      const response = await api.post(
-        `/auth/update/ads_set`,
-        {
-          adSetId,
-          newName,
-        }
-      );
+      const response = await api.post(`/auth/update/ads_set`, {
+        adSetId,
+        newName,
+      });
 
       if (response.status === 200) {
         setFetchData((prevData) =>
@@ -184,10 +182,9 @@ const AdsManager = ({
 
   const fetchCampaignId = async (campaignId) => {
     try {
-      const response = await api.get(
-        `/auth/campaign/${campaignId}`,
-        { withCredentials: true }
-      );
+      const response = await api.get(`/auth/campaign/${campaignId}`, {
+        withCredentials: true,
+      });
       return response.data;
     } catch (error) {
       console.log(error.message);
@@ -196,12 +193,9 @@ const AdsManager = ({
 
   const fetchAdsSetById = async (adSetId) => {
     try {
-      const response = await api.get(
-        `/auth/adsset/${adSetId}`,
-        {
-          withCredentials: true,
-        }
-      );
+      const response = await api.get(`/auth/adsset/${adSetId}`, {
+        withCredentials: true,
+      });
       return response.data;
     } catch (error) {
       console.log(error.message);
@@ -246,12 +240,9 @@ const AdsManager = ({
 
   const FetchAdsById = async (adId) => {
     try {
-      const response = await api.get(
-        `/auth/ads/${adId}`,
-        {
-          withCredentials: true,
-        }
-      );
+      const response = await api.get(`/auth/ads/${adId}`, {
+        withCredentials: true,
+      });
       return response.data;
     } catch (error) {
       console.log(error.message);
@@ -544,116 +535,113 @@ const AdsManager = ({
       }
     }
   };
-    const handleStateStatus = async (action) => {
-      const statusMap = {
-        Campaign: {
-          ids: SelectedCamapiagn,
-          endpoint: `/auth/pause/status/campaigns`,
-          idField: "campaignIds",
-          entityName: "Campaign",
-          idKey: "campaignId",
-        },
-        "Ads Set": {
-          ids: selectedBar,
-          endpoint: `/auth/pause/status/AdSets`,
-          idField: "adSetIds", 
-          entityName: "Ads set",
-          idKey: "adSetId",
-        },
-        Ads: {
-          ids: adsSelectedBar,
-          endpoint: `/auth/pause/status/Ads`,
-          idField: "adIds",
-          entityName: "Ads",
-          idKey: "adId", 
-        },
+  const handleStateStatus = async (action) => {
+    const statusMap = {
+      Campaign: {
+        ids: SelectedCamapiagn,
+        endpoint: `/auth/pause/status/campaigns`,
+        idField: "campaignIds",
+        entityName: "Campaign",
+        idKey: "campaignId",
+      },
+      "Ads Set": {
+        ids: selectedBar,
+        endpoint: `/auth/pause/status/AdSets`,
+        idField: "adSetIds",
+        entityName: "Ads set",
+        idKey: "adSetId",
+      },
+      Ads: {
+        ids: adsSelectedBar,
+        endpoint: `/auth/pause/status/Ads`,
+        idField: "adIds",
+        entityName: "Ads",
+        idKey: "adId",
+      },
+    };
+
+    const entityConfig = statusMap[state];
+    if (!entityConfig) {
+      setAdsLoading(!adsLoading);
+      return;
+    }
+
+    if (entityConfig.entityName === "Ads") {
+      setAdsLoading(true);
+    }
+
+    if (!entityConfig.ids?.length) {
+      ErrorToast(`Please select ${entityConfig.entityName}(s) first`);
+      return;
+    }
+
+    console.log("action", action);
+    const status = action === "On" ? "ACTIVE" : "PAUSED";
+    setDisableState(action);
+
+    try {
+      const payload = {
+        status,
+        [entityConfig.idField]: entityConfig.ids,
       };
 
-      const entityConfig = statusMap[state];
-      if (!entityConfig) {
-        setAdsLoading(!adsLoading);
-        return;
-      }
+      const response = await api.post(entityConfig.endpoint, payload);
 
-      if (entityConfig.entityName === "Ads") {
-        setAdsLoading(true);
-      }
-
-      if (!entityConfig.ids?.length) {
-        ErrorToast(`Please select ${entityConfig.entityName}(s) first`);
-        return;
-      }
-
-      console.log("action", action);
-      const status = action === "On" ? "ACTIVE" : "PAUSED";
-      setDisableState(action);
-
-      try {
-        const payload = {
-          status,
-          [entityConfig.idField]: entityConfig.ids,
-        };
-
-        const response = await api.post(
-          entityConfig.endpoint,
-          payload
+      if (response.status === 200) {
+        fetchAds();
+        toast.success(
+          `${
+            entityConfig.entityName
+          } status changed to ${status.toLowerCase()} successfully`
         );
-
-        if (response.status === 200) {
-          fetchAds();
-          toast.success(
-            `${
-              entityConfig.entityName
-            } status changed to ${status.toLowerCase()} successfully`
-          );
-          if (entityConfig.entityName === "Ads") {
-            setAdsLoading(false);
-          }
-        }
-      } catch (error) {
-        // Revert the disable state on error
-        setDisableState(action === "On" ? "Off" : "On");
-
         if (entityConfig.entityName === "Ads") {
           setAdsLoading(false);
         }
-
-        toast.error(
-          `Error changing ${entityConfig.entityName.toLowerCase()} status: ${
-            error.message
-          }`
-        );
-      } finally {
-        // Clear the disable state after completion
-        setDisableState("");
       }
-    };
+    } catch (error) {
+      // Revert the disable state on error
+      setDisableState(action === "On" ? "Off" : "On");
+
+      if (entityConfig.entityName === "Ads") {
+        setAdsLoading(false);
+      }
+
+      toast.error(
+        `Error changing ${entityConfig.entityName.toLowerCase()} status: ${
+          error.message
+        }`
+      );
+    } finally {
+      // Clear the disable state after completion
+      setDisableState("");
+    }
+  };
   return (
     <div className="w-full py-4 bg-inherit px-0 font-sans">
-         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-2">
-      {/* Left section */}
-      <div className="flex items-center gap-2 min-w-0">
-        <SelectState
-          state={disableState}
-          setState={setDisableState}
-          disableState={setDisableState}
-          ads={adsSelectedBar}
-          adset={selectedBar}
-          campaign={SelectedCamapiagn}
-          handleStateStatus={handleStateStatus}
-        />
-        <div className="max-w-[200px] sm:max-w-none">
-          <SearchBar2 />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-2">
+        {/* Left section */}
+        <div className="flex items-center gap-2 min-w-0">
+          <SelectState
+            state={disableState}
+            setState={setDisableState}
+            disableState={setDisableState}
+            ads={adsSelectedBar}
+            adset={selectedBar}
+            campaign={SelectedCamapiagn}
+            handleStateStatus={handleStateStatus}
+          />
+          <div className="max-w-[200px] sm:max-w-none">
+            <SearchBar2 />
+          </div>
+        </div>
+
+        {/* Right section */}
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
+          <AdsCalendarDialog />
+          <StyledDropdown />
+          <DeliveryBar />
         </div>
       </div>
-      
-      {/* Right section */}
-      <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
-        <AdsCalendarDialog />
-        <StyledDropdown />
-        <DeliveryBar />
-      </div>
-    </div>
 
       {/* Table View with Loading State */}
       {isLoading || loading ? (
@@ -671,10 +659,10 @@ const AdsManager = ({
             />
           )}
           {state === "Ads Set" && (
-            <>
+            <ResizableTable className="adset-table">
               <TableHeader>
                 <TableRow className="bg-gray-50 h-10">
-                  <TableHead className="w-12 p-2 select-none">
+                  <TableHead className="w-[50px] min-w-[50px] select-none">
                     <Checkbox
                       checked={
                         fetchedData.length > 0 &&
@@ -693,24 +681,24 @@ const AdsManager = ({
                       }}
                     />
                   </TableHead>
-                  <TableHead className="w-20 p-2 select-none border-r">
+                  <TableHead className="w-[80px] min-w-[80px] select-none border-r">
                     <div className="flex text-xs font-bold items-center">
                       status
                     </div>
                   </TableHead>
-                  <TableHead className="text-xs font-bold p-2 min-w-[60px] select-none border-r">
+                  <TableHead className="w-[200px] min-w-[400px] text-xs font-bold select-none border-r">
                     <div className="text-color">Ad Sets</div>
                   </TableHead>
                   {getVisibleColumns().map((col, idx) => (
                     <TableHead
                       key={idx}
-                      className={`font-bold text-xs select-none ${
+                      className={`w-[180px] min-w-[180px] font-bold text-xs select-none ${
                         idx !== getVisibleColumns().length - 1
                           ? "border-r"
                           : ""
                       }`}
                     >
-                      <div className="resize-x text-color overflow-hidden min-w-[120px]">
+                      <div className="text-color overflow-hidden">
                         {col}
                       </div>
                     </TableHead>
@@ -851,7 +839,7 @@ const AdsManager = ({
                   </TableRow>
                 ))}
               </TableBody>
-            </>
+            </ResizableTable>
           )}
           {state === "Ads" && (
             <Ads

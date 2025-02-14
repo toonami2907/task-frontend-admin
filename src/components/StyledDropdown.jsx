@@ -87,7 +87,7 @@ const StyledDropdown = () => {
               variant="outline"
               className="flex items-center gap-2 px-1 py-1.5 w-full justify-between"
             >
-              <span className="font-normal flex items-center text-black gap-2"><Columns3/> Columns: {selectedPresets}</span>
+              <span className="font-normal flex items-center text-black text-xs gap-2"><Columns3/> Columns: {selectedPresets}</span>
               <ChevronDown className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -115,7 +115,7 @@ const StyledDropdown = () => {
                             className="h-4 w-4"
                             onClick={(e) => e.stopPropagation()}
                           />
-                          <label htmlFor={item.name} className="cursor-pointer">
+                          <label htmlFor={item.name} className="cursor-pointer text-xs">
                             {item.name}
                           </label>
                         </div>

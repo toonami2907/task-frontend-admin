@@ -44,6 +44,7 @@ export const SetUp = [
     "Budget",
     "Last significant edit",
     "New customer CPA ",
+    "New customer Purchases ",
     "Attribution setting",
     "Results",
     "Correct Purchases",

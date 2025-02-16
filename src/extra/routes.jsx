@@ -71,7 +71,7 @@ const UserRoutes = () => (
       <UI />
       <Routes>
         <Route path="/auth" element={<PublicRoute><AuthPages /></PublicRoute>} />
-        <Route path="/auth/forgotten/password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+        <Route path="/auth/forgotten/password" element={<ForgotPassword />} />
         <Route path="/check-email" element={<PublicRoute><CheckEmail /></PublicRoute>} />
         <Route path="/reset-password/:token" element={<PublicRoute><ResetPassword /></PublicRoute>} />
         <Route path="/auth/google/callback" element={<PublicRoute><GoogleCallback /></PublicRoute>} />

@@ -2,39 +2,27 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Trash2 } from "lucide-react";
-import { useGlobalContext } from "@/functions/features/StateProvider";
-import { useNavigate } from "react-router-dom";
 import {
-  formatCardNumber,
-  formatExpiryDate,
-  luhnCheck,
-} from "@/functions/resources/aglorithm";
+  AlertCircle,
+  KeyRound,
+  Lock,
+  Shield,
+  Trash2,
+} from "lucide-react";
+import { useGlobalContext } from "@/functions/features/StateProvider";
 import api from "@/functions/resources/axiosConfig";
-import Billing from "@/sections/Billing";
+
 import { AccountManager } from "@/services/User/AccountManager";
 import ManageSubscription from "./SubscriptionSection";
 import TrialBanner from "./TrialBanner";
+import { Link } from "react-router-dom";
 
 export default function AccountSettings() {
   const { toast } = useToast();
   const { userInfo } = useGlobalContext();
-  const navigate = useNavigate();
-  // Color Constants
   const colors = {
     primary: {
       bg: "bg-[#1E3A8A] hover:bg-[#0F2D6B]",
@@ -55,22 +43,8 @@ export default function AccountSettings() {
     name: userInfo.name,
     email: userInfo.email,
     adAccounts: userInfo?.adAccounts,
-    shopifyStore: userInfo.Shopify_shopDomain || "my-awesome-store",
+    shopifyStore: userInfo.Shopify_shopDomain || "",
   });
-  const [isEditingBilling, setIsEditingBilling] = useState(false);
-  const [billingData, setBillingData] = useState(
-    userInfo?.billingInfo
-      ? {
-          cardNumber: userInfo.billingInfo.cardNumber || "",
-          expiry: userInfo.billingInfo.expiry || "",
-          cvc: userInfo.billingInfo.cvc || "",
-        }
-      : {
-          cardNumber: "",
-          expiry: "",
-          cvc: "",
-        }
-  );
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [newAdAccount, setNewAdAccount] = useState({
     account_id: "",
@@ -84,7 +58,8 @@ export default function AccountSettings() {
       // Update UI state
       toast({
         title: "Account Added",
-        description: "Your ads account has been successfully updated.",
+        description:
+          "Your ads account has been successfully updated.",
         className: colors.success.border,
       });
     } catch (error) {
@@ -96,33 +71,30 @@ export default function AccountSettings() {
     }
   };
 
-  const handleRemoveAdAccount = async(_id) => {
-
-try {
-  await accountManager.removeAdAccount(_id)
+  const handleRemoveAdAccount = async (_id) => {
+    try {
+      await accountManager.removeAdAccount(_id);
       const updatedAdAccounts = profileData.adAccounts.filter(
-      (account) => account._id !== _id
-    );
-    setProfileData({
-      ...profileData,
-      adAccounts: updatedAdAccounts,
-    });
+        (account) => account._id !== _id
+      );
+      setProfileData({
+        ...profileData,
+        adAccounts: updatedAdAccounts,
+      });
 
-    toast({
-      title: "Ad Account Removed",
-      description:
-        "Facebook Ad account has been removed successfully.",
-      className: colors.success.border,
-    });
-} catch (error) {
-  toast({
-    title: "Error",
-    description: error.message,
-    variant: "destructive",
-  });
-
-}
-
+      toast({
+        title: "Ad Account Removed",
+        description:
+          "Facebook Ad account has been removed successfully.",
+        className: colors.success.border,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   // Billing Section
@@ -132,10 +104,9 @@ try {
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
+    otp: "",
   });
   const [isEditingPassword, setIsEditingPassword] = useState(false);
-
-
 
   // Profile Handlers
   const handleProfileEdit = () => setIsEditingProfile(true);
@@ -145,12 +116,13 @@ try {
         name: profileData.name,
         email: profileData.email,
         shopifyStore: profileData.shopifyStore,
-      }
+      };
       await accountManager.updateProfile(data);
       setIsEditingProfile(false);
       toast({
         title: "Profile Updated",
-        description: "Your profile information has been successfully updated.",
+        description:
+          "Your profile information has been successfully updated.",
         className: colors.success.border,
       });
     } catch (error) {
@@ -175,136 +147,50 @@ try {
     });
   };
 
-  // Billing Handlers
-  const handleBillingEdit = () => {
-    // Reset to current billing info when starting to edit
-    if (userInfo?.billingInfo) {
-      setBillingData({
-        cardNumber: userInfo.billingInfo.cardNumber || "",
-        expiry: userInfo.billingInfo.expiry || "",
-        cvc: userInfo.billingInfo.cvc || "",
-      });
-    }
-    setIsEditingBilling(true);
-  };
-
-  const handleBillingSave = async () => {
-    // Validate card details
-    if (
-      !billingData.cardNumber ||
-      !billingData.expiry ||
-      !billingData.cvc
-    ) {
-      toast({
-        title: "Error",
-        description: "Please fill in all billing fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate card number (Luhn algorithm)
-    const isValidCard = luhnCheck(
-      billingData.cardNumber.replace(/\s/g, "")
-    );
-    if (!isValidCard) {
-      toast({
-        title: "Error",
-        description: "Invalid card number",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate expiry date
-    const [month, year] = billingData.expiry.split("/");
-    const expiry = new Date(
-      2000 + parseInt(year),
-      parseInt(month) - 1
-    );
-    if (expiry < new Date()) {
-      toast({
-        title: "Error",
-        description: "Card has expired",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate CVV
-    if (!/^\d{3,4}$/.test(billingData.cvc)) {
-      toast({
-        title: "Error",
-        description: "Invalid CVV",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // try {
-    // return
-    //   const response = await api.post("/auth/add/card", {
-    //     cardNumber: billingData.cardNumber.replace(/\s/g, ""),
-    //     expirationDate: billingData.expiry,
-    //     cvv: billingData.cvc,
-    //     userId: userInfo._id,
-    //   }, {withCredentials:true})
-
-    //   if (response.status !== 201)
-    //     throw new Error("Failed to save card details");
-
-    //   setIsEditingBilling(false);
-    //   toast({
-    //     title: userInfo?.billingInfo
-    //       ? "Billing Updated"
-    //       : "Billing Added",
-    //     description: "Payment method has been successfully saved.",
-    //     className: colors.success.border,
-    //   });
-    // } catch (error) {
-    //   toast({
-    //     title: "Error",
-    //     description: error.response.data?.message || "Failed to save card details. Please try again.",
-    //     variant: "destructive",
-    //   });
-    // }
-  };
-
-  const handleBillingCancel = () => {
-    setIsEditingBilling(false);
-    // Reset to original billing info when canceling
-    setBillingData(
-      userInfo?.billingInfo
-        ? {
-            cardNumber: userInfo.billingInfo.cardNumber || "",
-            expiry: userInfo.billingInfo.expiry || "",
-            cvc: userInfo.billingInfo.cvc || "",
-          }
-        : {
-            cardNumber: "",
-            expiry: "",
-            cvc: "",
-          }
-    );
-  };
-
-  // Password Handlers
-  const handlePasswordEdit = () => setIsEditingPassword(true);
-  const handlePasswordSave = () => {
+  
+ 
+  const handlePasswordSave = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast({
         title: "Error",
-        description: "New passwords don't match.",
+        description: "New passwords don't match",
         variant: "destructive",
       });
       return;
     }
-    setIsEditingPassword(false);
-    toast({
-      title: "Password Updated",
-      description: "Your password has been successfully changed.",
-      className: colors.success.border,
-    });
+
+    try {
+      const response = await api.post(
+        "/auth/v1/user/change/password",
+        {
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+          confirmPassword: passwordData.confirmPassword,
+          otp: passwordData.otp,
+        }
+      );
+
+      setIsEditingPassword(false);
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+        otp: "",
+      });
+      if (response.status === 200) {
+        toast({
+          title: "Success",
+          description: "Password changed successfully",
+          className: colors.success.border,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message,
+        variant: "destructive",
+      });
+    }
   };
   const handlePasswordCancel = () => {
     setIsEditingPassword(false);
@@ -312,16 +198,6 @@ try {
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
-    });
-  };
-
-  // Subscription Handlers
-  const handleSubscriptionCancel = () => {
-    toast({
-      title: "Subscription Cancelled",
-      description:
-        "Your subscription will end at the end of the billing period.",
-      className: colors.success.border,
     });
   };
 
@@ -346,12 +222,29 @@ try {
       });
     }
   };
+  const handleRequestOTP = async () => {
+    try {
+         await api.post('/auth/v1/user/mail/change/password');
+      toast({
+        title: "Verification Code Sent",
+        description: "Please check your email for the verification code",
+        className: colors.success.border,
+      });
+      setIsEditingPassword(true);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to send verification code",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 lg:max-w-4xl space-y-8 bg-[#F3F4F6]">
       {/* Profile Section */}
       {userInfo.hasUsedTrial && (
-        <TrialBanner expiryDate={userInfo.subscriptionExpiresAt}/>
+        <TrialBanner expiryDate={userInfo.subscriptionExpiresAt} />
       )}
 
       <section className="bg-white rounded-lg shadow-sm border border-[#E5E7EB]">
@@ -573,107 +466,169 @@ try {
       </section>
 
       {/* Subscription Section */}
-     <ManageSubscription userInfo={userInfo} />
-
+      <ManageSubscription userInfo={userInfo} />
 
       {/* Security Section */}
-      <section className="bg-white rounded-lg shadow-sm border border-[#E5E7EB]">
-        <div className="p-6">
-          <h2 className="text-2xl font-semibold text-[#111827]">
-            Security
-          </h2>
-          <p className="text-sm text-[#374151] mt-1">
-            Manage your password and security preferences.
-          </p>
-        </div>
-        <Separator className="bg-[#E5E7EB]" />
-        <div className="p-6 space-y-6 w-full md:max-w-md">
-          <div className="space-y-2">
-            <Label
-              htmlFor="current-password"
-              className={`${colors.primary.text} font-medium`}
-            >
-              Current Password
-            </Label>
-            <Input
-              id="current-password"
-              type="password"
-              value={passwordData.currentPassword}
-              onChange={(e) =>
-                setPasswordData({
-                  ...passwordData,
-                  currentPassword: e.target.value,
-                })
-              }
-              className={`bg-white ${colors.primary.ring}`}
-              disabled={!isEditingPassword}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label
-              htmlFor="new-password"
-              className={`${colors.primary.text} font-medium`}
-            >
-              New Password
-            </Label>
-            <Input
-              id="new-password"
-              type="password"
-              value={passwordData.newPassword}
-              onChange={(e) =>
-                setPasswordData({
-                  ...passwordData,
-                  newPassword: e.target.value,
-                })
-              }
-              className={`bg-white ${colors.primary.ring}`}
-              disabled={!isEditingPassword}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label
-              htmlFor="confirm-password"
-              className={`${colors.primary.text} font-medium`}
-            >
-              Confirm New Password
-            </Label>
-            <Input
-              id="confirm-password"
-              type="password"
-              value={passwordData.confirmPassword}
-              onChange={(e) =>
-                setPasswordData({
-                  ...passwordData,
-                  confirmPassword: e.target.value,
-                })
-              }
-              className={`bg-white ${colors.primary.ring}`}
-              disabled={!isEditingPassword}
-            />
-          </div>
-          {isEditingPassword ? (
-            <div className="flex gap-2">
-              <Button
-                onClick={handlePasswordSave}
-                className={colors.primary.bg}
-              >
-                Save Changes
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handlePasswordCancel}
-              >
-                Cancel
-              </Button>
+      <section className="bg-white rounded-xl shadow-lg border border-gray-200 transition-all duration-200 hover:shadow-xl">
+        <div className="p-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-blue-50 p-2 rounded-lg">
+              <Shield className="w-6 h-6 text-blue-600" />
             </div>
-          ) : (
-            <Button
-              onClick={handlePasswordEdit}
-              className={colors.primary.bg}
+            <div>
+              <h2 className="text-2xl font-semibold text-gray-900">
+                Security Settings
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Manage your password and security preferences
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <Separator className="bg-gray-100" />
+
+        <div className="p-8 space-y-6 w-full md:max-w-xl">
+          <div className="space-y-4">
+            <div className="relative">
+              <Label
+                htmlFor="otp"
+                className="text-sm font-medium text-gray-700"
+              >
+                Verification Code
+              </Label>
+              <Input
+                id="otp"
+                value={passwordData.otp}
+                onChange={(e) =>
+                  setPasswordData({
+                    ...passwordData,
+                    otp: e.target.value,
+                  })
+                }
+                disabled={!isEditingPassword}
+                className="mt-2"
+                placeholder="Enter code from email"
+              />
+            </div>
+            <div className="relative">
+              <Label
+                htmlFor="current-password"
+                className="text-sm font-medium text-gray-700 flex items-center gap-2"
+              >
+                <Lock className="w-4 h-4 text-gray-400" />
+                Current Password
+              </Label>
+              <Input
+                id="current-password"
+                type="password"
+                value={passwordData.currentPassword}
+                onChange={(e) =>
+                  setPasswordData({
+                    ...passwordData,
+                    currentPassword: e.target.value,
+                  })
+                }
+                className="mt-2 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                disabled={!isEditingPassword}
+                placeholder={
+                  isEditingPassword
+                    ? "Enter current password"
+                    : "••••••••"
+                }
+              />
+            </div>
+
+            <div className="relative">
+              <Label
+                htmlFor="new-password"
+                className="text-sm font-medium text-gray-700 flex items-center gap-2"
+              >
+                <KeyRound className="w-4 h-4 text-gray-400" />
+                New Password
+              </Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={passwordData.newPassword}
+                onChange={(e) =>
+                  setPasswordData({
+                    ...passwordData,
+                    newPassword: e.target.value,
+                  })
+                }
+                className="mt-2 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                disabled={!isEditingPassword}
+                placeholder={
+                  isEditingPassword
+                    ? "Enter new password"
+                    : "••••••••"
+                }
+              />
+            </div>
+
+            <div className="relative">
+              <Label
+                htmlFor="confirm-password"
+                className="text-sm font-medium text-gray-700 flex items-center gap-2"
+              >
+                <KeyRound className="w-4 h-4 text-gray-400" />
+                Confirm New Password
+              </Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={passwordData.confirmPassword}
+                onChange={(e) =>
+                  setPasswordData({
+                    ...passwordData,
+                    confirmPassword: e.target.value,
+                  })
+                }
+                className="mt-2 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                disabled={!isEditingPassword}
+                placeholder={
+                  isEditingPassword
+                    ? "Confirm new password"
+                    : "••••••••"
+                }
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-4">
+            <Link
+              to="/auth/forgotten/password"
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
             >
-              Change Password
-            </Button>
-          )}
+              Forgot your password?
+            </Link>
+
+            {isEditingPassword ? (
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handlePasswordCancel}
+                  className="border-gray-200 hover:bg-gray-50 text-gray-700"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handlePasswordSave}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Save Changes
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={handleRequestOTP}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Change Password
+              </Button>
+            )}
+          </div>
         </div>
       </section>
     </div>

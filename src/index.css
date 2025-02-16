@@ -107,6 +107,26 @@ li{
   }
 }
 
+.resizable-table th:not(:first-child):not(:nth-child(2)) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resizable-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resizable-table th > div,
+.resizable-table td > div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
 
 .resize-handle:hover {
   background-color: rgba(59, 130, 246, 0.5);

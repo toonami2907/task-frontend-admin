@@ -66,7 +66,7 @@ export function AppSidebar({
             url: "/report/orders",
           },
           {
-            title: "Purchases",
+            title: "Marketing Efficiency Report",
             url: "/report/purchases",
           },
          

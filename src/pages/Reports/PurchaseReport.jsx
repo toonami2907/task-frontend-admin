@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, ShoppingCart } from "lucide-react"; // Added ShoppingCart for no-data icon
 import { CSVLink } from "react-csv";
 import api from "@/functions/resources/axiosConfig";
 import CheckboxSelect from "./CheckboxSelect";
@@ -68,6 +68,16 @@ const LoadingSkeleton = () => (
   </div>
 );
 
+const NoDataMessage = () => (
+  <div className="flex flex-col items-center justify-center h-full py-16 text-center">
+    <ShoppingCart className="w-16 h-16 text-gray-400 mb-4" />
+    <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300">No Purchase Data Available</h3>
+    <p className="text-gray-500 dark:text-gray-400 mt-2">
+      There are no orders or ad spends to display. Connect your platforms or wait for data to populate.
+    </p>
+  </div>
+);
+
 export const PurchaseReport = () => {
   const [orders, setOrders] = useState([]);
   const [adsData, setAdsData] = useState([]);
@@ -89,10 +99,9 @@ export const PurchaseReport = () => {
       dayRefs.current[day] = dayRefs.current[day] || React.createRef();
     });
 
-    // Set up intersection observer
     const options = {
       root: null,
-      rootMargin: '-100px 0px 0px 0px', // Adjust based on header height
+      rootMargin: '-100px 0px 0px 0px',
       threshold: 0
     };
 
@@ -104,7 +113,6 @@ export const PurchaseReport = () => {
       });
     }, options);
 
-    // Observe all day sections
     Object.values(dayRefs.current).forEach(ref => {
       if (ref.current) {
         observer.observe(ref.current);
@@ -139,7 +147,7 @@ export const PurchaseReport = () => {
           end: dates[dates.length - 1],
         });
     }
-  }, [orders, dateRange.start]); // Added dateRange.start to dependencies
+  }, [orders, dateRange.start]);
 
   const fetchData = async () => {
     try {
@@ -168,7 +176,6 @@ export const PurchaseReport = () => {
 
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
-      // Skip filtering if dates aren't set yet
       if (!dateRange.start || !dateRange.end) return false;
 
       const orderDate = parseISO(order.created_at);
@@ -177,7 +184,6 @@ export const PurchaseReport = () => {
         end: parseISO(dateRange.end),
       });
 
-      // Handle country filtering with null check
       const isInSelectedCountries =
         selectedCountries.includes("all") ||
         (order.shippingAddress &&
@@ -186,6 +192,7 @@ export const PurchaseReport = () => {
       return isInDateRange && isInSelectedCountries;
     });
   }, [orders, dateRange, selectedCountries]);
+
   const getAdSpendForDateTime = (date, utmCampaign) => {
     const orderDate = new Date(date);
     const matchingAds = adsData.filter((ad) => {
@@ -321,20 +328,18 @@ export const PurchaseReport = () => {
     [groupedData]
   );
 
- 
-
   const handleDateRangeChange = (type, date) => {
     setDateRange((prev) => ({ ...prev, [type]: date }));
   };
 
-  console.log(currentDay)
+  console.log(currentDay);
 
   return (
     <div className="space-y-2 p-4">
       <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4 md:justify-between md:items-start">
         <div className="flex-1">
           <h2 className="text-xl md:text-2xl uppercase font-bold mb-4">
-           Marketing Efficiency Report
+            Marketing Efficiency Report
           </h2>
         </div>
         <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:space-x-4">
@@ -402,8 +407,7 @@ export const PurchaseReport = () => {
                   <TableRow className="bg-white py-4 ">
                     <TableHead className="w-[180px] md:w-[300px]">
                       <h1>Day & Time</h1>
-                      <h1 className="text-black">{currentDay != "Monday" && currentDay}</h1>
-                      
+                      <h1 className="text-black">{currentDay !== "Monday" && currentDay}</h1>
                     </TableHead>
                     <TableHead className="min-w-[100px] text-center">
                       Purchases
@@ -432,21 +436,35 @@ export const PurchaseReport = () => {
               className="overflow-auto w-full"
               style={{ height: "calc(600px - 57px)" }}
             >
-              <Table>
-                <TableBody>
-                  {loading ? (
+              {loading ? (
+                <Table>
+                  <TableBody>
                     <TableRow>
                       <TableCell colSpan={isSmallScreen ? 4 : 6}>
                         <LoadingSkeleton />
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    Object.entries(groupedData).map(
+                  </TableBody>
+                </Table>
+              ) : orders.length === 0 && adsData.length === 0 ? (
+                <Table>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell colSpan={isSmallScreen ? 4 : 6}>
+                        <NoDataMessage />
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              ) : (
+                <Table>
+                  <TableBody>
+                    {Object.entries(groupedData).map(
                       ([day, timeSlots]) => (
                         <React.Fragment key={day}>
                           <TableRow
-                           ref={dayRefs.current[day]}
-                           data-day={day}
+                            ref={dayRefs.current[day]}
+                            data-day={day}
                           >
                             <TableCell
                               colSpan={isSmallScreen ? 4 : 6}
@@ -478,7 +496,7 @@ export const PurchaseReport = () => {
                                 <TableCell className="pl-4 md:pl-8 w-[180px] md:w-[300px] font-medium text-sm md:text-base py-3">
                                   {timeSlot}
                                 </TableCell>
-                                <TableCell  className={`text-sm md:text-base min-w-[100px] py-3 text-center transition-colors ${getCellHighlightClass(slotData.itemsPurchased, 'purchases')}`}>
+                                <TableCell className={`text-sm md:text-base min-w-[100px] py-3 text-center transition-colors ${getCellHighlightClass(slotData.itemsPurchased, 'purchases')}`}>
                                   {slotData.itemsPurchased || "—"}
                                 </TableCell>
                                 <TableCell className="text-sm md:text-base min-w-[100px] py-3 text-center">
@@ -506,10 +524,10 @@ export const PurchaseReport = () => {
                           })}
                         </React.Fragment>
                       )
-                    )
-                  )}
-                </TableBody>
-              </Table>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </div>
           </div>
         </CardContent>

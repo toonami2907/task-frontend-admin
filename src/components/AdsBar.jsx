@@ -88,7 +88,6 @@ const AdsManager = ({
             limit: itemsPerPage 
           }
         });
-        console.log(`${state} response:`, response.data);
         setOriginalData(response.data.data);
         setFetchData(response.data.data);
         setPagination(prev => ({

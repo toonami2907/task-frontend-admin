@@ -37,6 +37,7 @@ export const handleLogout = async () => {
     Cookies.remove("access_token")
     Cookies.remove("refresh_token")
     window.location.href = '/auth';
+    window.location.reload()
   }
 };
 

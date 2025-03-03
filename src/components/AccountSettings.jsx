@@ -62,6 +62,7 @@ export default function AccountSettings() {
           "Your ads account has been successfully updated.",
         className: colors.success.border,
       });
+      window.location.reload()
     } catch (error) {
       toast({
         title: "Error",
@@ -88,6 +89,7 @@ export default function AccountSettings() {
           "Facebook Ad account has been removed successfully.",
         className: colors.success.border,
       });
+      window.location.reload()
     } catch (error) {
       toast({
         title: "Error",
@@ -112,6 +114,13 @@ export default function AccountSettings() {
   const handleProfileEdit = () => setIsEditingProfile(true);
   const handleProfileSave = async () => {
     try {
+      if (profileData.shopifyStore && !profileData.shopifyStore.includes(".myshopify.com")) {
+        toast({
+          title: "Error",
+          description: "Invalid Shopify Store URL. Please include.myshopify.com",
+          variant: "destructive",
+        })
+      }
       const data = {
         name: profileData.name,
         email: profileData.email,
@@ -438,7 +447,7 @@ export default function AccountSettings() {
               }
               className={`bg-white ${colors.primary.ring}`}
               disabled={!isEditingProfile}
-              placeholder="Enter your Shopify store name"
+              placeholder="Shopify Store (e.g., mystore.myshopify.com)"
             />
           </div>
 

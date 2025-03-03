@@ -23,7 +23,7 @@ import { useGlobalContext } from "@/functions/features/StateProvider";
 const AdsCalendarDialog = () => {
   const today = new Date();
   const [date, setDate] = React.useState({
-    from: new Date(),
+    from: new Date(new Date().setDate(today.getDate() - 30)),
     to: new Date(),
   });
   const [selectedRange, setSelectedRange] = React.useState("today");

@@ -400,7 +400,7 @@ const Ads = ({
                         case "Link clicks":
                           return ads.insights?.clicks || 0;
                         case "Audience location (Ad set settings)":
-                          return "NG";
+                          return "US";
                         case "Objective":
                           return ads.objective
                             ?.substring(8)

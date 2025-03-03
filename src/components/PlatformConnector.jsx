@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, AlertCircle, RefreshCcw, HelpCircle, ArrowRight } from "lucide-react";
+import { Check, AlertCircle, RefreshCcw, HelpCircle, ArrowRight, Unlink } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { API_URL, useGlobalContext } from "@/functions/features/StateProvider";
 import {
@@ -14,11 +14,12 @@ import {
 import { useNavigate } from "react-router-dom";
 import { ErrorToast } from "@/hooks/customToast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import  api  from "@/functions/resources/axiosConfig"; // Import your axios instance
 
 export default function PlatformConnectionPage() {
   const [shopifyStore, setShopifyStore] = useState("");
   const [loading, setLoading] = useState(false);
-  const { isPlatformConnected } = useGlobalContext();
+  const { isPlatformConnected, fetchAds } = useGlobalContext(); // fetchAds to refresh context
   const [accessToken, setAccessToken] = useState("");
   const navigate = useNavigate();
   const UserId = localStorage.getItem("UserId");
@@ -107,6 +108,32 @@ export default function PlatformConnectionPage() {
     }
   };
 
+  const handleDisconnectFacebook = async () => {
+    setLoading(true);
+    try {
+      const response = await api.post('/auth/disconnect-facebook');
+      toast.success(response.data.message);
+      window.location.reload()
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to disconnect Facebook Ads");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDisconnectShopify = async () => {
+    setLoading(true);
+    try {
+      const response = await api.post('/auth/disconnect-shopify');
+      toast.success(response.data.message);
+      window.location.reload()
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to disconnect Shopify");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container max-w-4xl mx-auto py-16 px-4 space-y-8">
@@ -152,16 +179,29 @@ export default function PlatformConnectionPage() {
                   <p className="text-sm text-gray-600">Connect your Facebook Ads account</p>
                 </div>
               </div>
-              <Button
-                onClick={handleFacebookConnect}
-                disabled={isPlatformConnected.facebook}
-                className="group relative"
-              >
-                <span className="flex items-center">
-                  {isPlatformConnected.facebook ? "Reconnect" : "Connect Facebook"}
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </span>
-              </Button>
+              <div className="flex space-x-4">
+                <Button
+                  onClick={handleFacebookConnect}
+                  disabled={isPlatformConnected.facebook || loading}
+                  className="group relative"
+                >
+                  <span className="flex items-center">
+                    {isPlatformConnected.facebook ? "connected" : "Connect Facebook"}
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </span>
+                </Button>
+                {isPlatformConnected.facebook && (
+                  <Button
+                    onClick={handleDisconnectFacebook}
+                    disabled={loading}
+                    variant="outline"
+                    className="border-red-500 text-red-500 hover:bg-red-50"
+                  >
+                    <Unlink className="mr-2 h-4 w-4" />
+                    {loading ? "Disconnecting..." : "Disconnect"}
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -207,7 +247,7 @@ export default function PlatformConnectionPage() {
                           <p className="font-medium mb-2">To get your Shopify Access Token:</p>
                           <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600">
                             <li>Go to Shopify Admin</li>
-                            <li>Navigate to Apps &gt; Manage private apps</li>
+                            <li>Navigate to Apps > Manage private apps</li>
                             <li>Create a new private app</li>
                             <li>Set required permissions (Read/Write)</li>
                             <li>Generate the access token</li>
@@ -227,16 +267,29 @@ export default function PlatformConnectionPage() {
                   />
                 </div>
 
-                <Button
-                  onClick={handleShopifyConnect}
-                  disabled={isPlatformConnected.shopify || loading}
-                  className="group relative"
-                >
-                  <span className="flex items-center">
-                    {loading ? "Connecting..." : isPlatformConnected.shopify ? "Reconnect" : "Connect Shopify"}
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </span>
-                </Button>
+                <div className="flex space-x-4">
+                  <Button
+                    onClick={handleShopifyConnect}
+                    disabled={isPlatformConnected.shopify || loading}
+                    className="group relative"
+                  >
+                    <span className="flex items-center">
+                      {loading ? "Connecting..." : isPlatformConnected.shopify ? "connected" : "Connect Shopify"}
+                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </span>
+                  </Button>
+                  {isPlatformConnected.shopify && (
+                    <Button
+                      onClick={handleDisconnectShopify}
+                      disabled={loading}
+                      variant="outline"
+                      className="border-red-500 text-red-500 hover:bg-red-50"
+                    >
+                      <Unlink className="mr-2 h-4 w-4" />
+                      {loading ? "Disconnecting..." : "Disconnect"}
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

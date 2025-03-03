@@ -43,6 +43,7 @@ function Layout() {
       } catch (error) {
         if (error.response?.status === 403) {
           localStorage.removeItem("UserId");
+          window.location.href='/auth'
           setIsAuthenticated(false);
         }
       }

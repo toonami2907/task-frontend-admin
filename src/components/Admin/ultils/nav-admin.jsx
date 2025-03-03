@@ -80,30 +80,7 @@ export function NavAdmin({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {/* <DropdownMenuGroup>
-              <DropdownMenuItem
-               onClick={()=>naviagte('/billing/pricing')}
-              >
-                <Sparkles />
-                Upgrade plan
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem
-               onClick={()=>naviagte('/user/account')}
-              >
-                <BadgeCheck />
-                Account
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-            onClick={handleLogout}
-            >
-              <LogOut />
-              Log out
-            </DropdownMenuItem> */}
+        
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

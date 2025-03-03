@@ -41,7 +41,7 @@ const SearchBar2 = () => {
     if (activeFilters?.length > 0 && filters.length === 0) {
       setFilters(activeFilters);
     }
-  }, []);
+  }, [activeFilters]);
 
   const handleAddFilter = useCallback((category) => {
     const newFilter = {
@@ -64,9 +64,6 @@ const SearchBar2 = () => {
     }
     setQuery("");
     setShowSuggestions(false);
-    
-    // Automatically open dialog when max filters is reached
-   
   }, [query, filters]);
 
   const handleEditFilter = useCallback((filter, index) => {
@@ -91,10 +88,10 @@ const SearchBar2 = () => {
     <div className={`
       flex items-center gap-1 sm:gap-2 
       bg-gray-200 text-gray-700 rounded
-      ${filter.length >= 4 ? 'text-[10px] sm:text-xs py-0.5' : 'px-1.5 sm:px-2 py-1'}
+      ${filter.length >= 4 ? 'text-[10px] sm:text-xs py-0.5 px-1' : 'px-1.5 sm:px-2 py-1'}
       transition-all duration-200 ease-in-out
       hover:bg-gray-300
-      max-w-[200px] sm:max-w-none
+      max-w-[150px] sm:max-w-[200px] truncate
     `}>
       <span className={`${filter.length >= 4 ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm'} truncate`}>
         {filter.label}{" "}
@@ -110,7 +107,7 @@ const SearchBar2 = () => {
           e.stopPropagation();
           onRemove(index);
         }}
-        className="hover:bg-blue-100 rounded p-0.5"
+        className="hover:bg-blue-100 rounded p-0.5 shrink-0"
       >
         <X className="h-3 w-3 sm:h-4 sm:w-4" />
       </button>
@@ -126,11 +123,10 @@ const SearchBar2 = () => {
   }, [filters, setActiveFilters]);
 
   return (
-    <div className="xs:w-full max-w-[300px] xs:max-w-[470px] w-full lg:max-w-[800px] relative font-sans">
-    <div className="relative">
-      <div className="flex items-center border justify-center border-black b w-full rounded-2xl sm:rounded-3xl bg-white">
-        <div className="flex flex-wrap gap-1.5 sm:gap-2 p-1.5 sm:p-2 w-full min-h-[30px] overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-          <div className="flex flex-wrap gap-1.5 sm:gap-2 max-w-full">
+    <div className="w-full relative font-sans">
+      <div className="relative">
+        <div className="flex items-center border border-black rounded-2xl sm:rounded-3xl bg-white w-full">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2 p-1.5 sm:p-2 w-full min-h-[30px] overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
             {filters.slice(0, MAX_VISIBLE_FILTERS).map((filter, index) => (
               <FilterCard
                 key={filter.id}
@@ -139,30 +135,27 @@ const SearchBar2 = () => {
                 onRemove={handleRemoveFilter}
               />
             ))}
-              
-              {isAtMaxFilters && (
-                <Button
-                  variant="ghost"
-                  className="h-6 sm:h-7 px-1.5 sm:px-2 text-xs sm:text-sm text-blue-600 shrink-0"
-                  onClick={() => setFilterDialogOpen(true)}
-                >
-                  {filters.length > MAX_VISIBLE_FILTERS ? (
-                    <span className="flex items-center">
-                      View more ({filters.length - MAX_VISIBLE_FILTERS})
-                      <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
-                    </span>
-                  ) : (
-                    "Add filter"
-                  )}
-                </Button>
-              )}
-            </div>
-
+            {isAtMaxFilters && (
+              <Button
+                variant="ghost"
+                className="h-6 sm:h-7 px-1.5 sm:px-2 text-xs sm:text-sm text-blue-600 shrink-0"
+                onClick={() => setFilterDialogOpen(true)}
+              >
+                {filters.length > MAX_VISIBLE_FILTERS ? (
+                  <span className="flex items-center">
+                    View more ({filters.length - MAX_VISIBLE_FILTERS})
+                    <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
+                  </span>
+                ) : (
+                  "Add filter"
+                )}
+              </Button>
+            )}
             {!isAtMaxFilters && (
-              <div className="flex items-center min-w-[80px] xs:min-w-[120px] xl:min-w-[400px] flex-1">
+              <div className="flex items-center flex-1 min-w-[100px]">
                 <input
                   type="text"
-                  className="w-full px-1.5 sm:px-2 py-1 sm:py-1.5 bg-transparent rounded-2xl sm:rounded-3xl border-none h-full focus:ring-0 text-[10px] sm:text-xs"
+                  className="w-full px-1.5 sm:px-2 py-1 sm:py-1.5 bg-transparent rounded-2xl sm:rounded-3xl border-none h-full focus:ring-0 text-[10px] sm:text-xs focus:outline-none"
                   placeholder="Search by name, ID, metric"
                   value={query}
                   onChange={(e) => {
@@ -263,7 +256,7 @@ const SearchBar2 = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Contains">Contains</SelectItem>
-                <SelectItem value="Doesn't contain">Doesn` t contain</SelectItem>
+                <SelectItem value="Doesn't contain">Doesn`t contain</SelectItem>
               </SelectContent>
             </Select>
             <input

@@ -56,13 +56,12 @@ const AdsManager = ({
   const [disableState, setDisableState] = useState("");
   const [adsSelectedBar, setAdsSelectedBar] = useState([]);
 
-  // Individual pagination states for each view
   const [pagination, setPagination] = useState({
     Campaign: { currentPage: 1, totalItems: 0 },
     "Ads Set": { currentPage: 1, totalItems: 0 },
     Ads: { currentPage: 1, totalItems: 0 }
   });
-  const itemsPerPage = 10; // Fixed limit, could be made configurable
+  const itemsPerPage = 10;
 
   const LoadingSpinner = () => (
     <div className="flex flex-col items-center justify-center w-full py-8 space-y-2">
@@ -103,7 +102,7 @@ const AdsManager = ({
     };
 
     FetchDashboardStats();
-  }, [state, pagination[state].currentPage]); // Re-fetch when state or its currentPage changes
+  }, [state, pagination[state].currentPage]);
 
   const handleAdSetNameUpdate = async (adSetId, newName) => {
     try {
@@ -500,7 +499,6 @@ const AdsManager = ({
     }
   };
 
-  // Pagination handlers for the current state
   const totalPages = Math.ceil(pagination[state].totalItems / itemsPerPage);
 
   const handlePreviousPage = () => {
@@ -523,8 +521,8 @@ const AdsManager = ({
 
   return (
     <div className="w-full py-4 bg-inherit px-0 font-sans">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-2">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center justify-between w-full p-2 gap-2">
+        <div className="flex items-center w-full gap-2">
           <SelectState
             state={disableState}
             setState={setDisableState}
@@ -533,15 +531,14 @@ const AdsManager = ({
             adset={selectedBar}
             campaign={SelectedCamapiagn}
             handleStateStatus={handleStateStatus}
+            className="flex-shrink-0"
           />
-          <div className="max-w-[200px] sm:max-w-none">
-            <SearchBar2 />
+          <SearchBar2 className="flex-1 min-w-0" />
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <AdsCalendarDialog />
+            <StyledDropdown />
+            <DeliveryBar />
           </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
-          <AdsCalendarDialog />
-          <StyledDropdown />
-          <DeliveryBar />
         </div>
       </div>
 
@@ -677,7 +674,6 @@ const AdsManager = ({
             )}
           </Table>
 
-          {/* Pagination Controls */}
           <div className="flex items-center justify-between mt-4 px-2">
             <div className="text-sm text-gray-600">
               Showing {(pagination[state].currentPage - 1) * itemsPerPage + 1} - 

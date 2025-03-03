@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { sortPresets } from "@/functions/Preset";
 import api from "../resources/axiosConfig";
 import PropTypes from 'prop-types';
+import Cookies from 'js-cookie'
 
 export const StateContext = createContext();
 
@@ -33,11 +34,8 @@ export const handleLogout = async () => {
     console.error('Logout error:', error);
   } finally {
     localStorage.clear();
-    document.cookie.split(";").forEach(cookie => {
-      document.cookie = cookie
-        .replace(/^ +/, "")
-        .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
-    });
+    Cookies.remove("access_token")
+    Cookies.remove("refresh_token")
     window.location.href = '/auth';
   }
 };
@@ -96,15 +94,18 @@ export default function StateProvider({ children }) {
     setLoading(true);
     setAdsData(null);
     setJobId(null);
-
-    const today = new Date().toISOString().split('T')[0];
-    const dates = dateRange || { startDate: today, endDate: today };
+  
+    const today = new Date();
+    const defaultStartDate = new Date(today.setDate(today.getDate() - 30)).toISOString().split('T')[0];
+    const defaultEndDate = new Date().toISOString().split('T')[0];
+    
+    const dates = dateRange || { startDate: defaultStartDate, endDate: defaultEndDate };
     const payload = selectedAdAccount ? { 
       FACEBOOK_ADS_ACT_ID: selectedAdAccount.id,
       startDate: dates.startDate,
       endDate: dates.endDate,
     } : { startDate: dates.startDate, endDate: dates.endDate };
-
+  
     try {
       await api.get("/auth/fetchOrder", { withCredentials: true });
       console.log(`fetchAds: Sending payload`, payload);

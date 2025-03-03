@@ -23,20 +23,20 @@ import { useGlobalContext } from "@/functions/features/StateProvider";
 const AdsCalendarDialog = () => {
   const today = new Date();
   const [date, setDate] = React.useState({
-    from: new Date(new Date().setDate(today.getDate() - 30)),
-    to: new Date(),
+    from: new Date(today.setDate(today.getDate() - 30)), // 30 days ago
+    to: new Date(), // Today
   });
-  const [selectedRange, setSelectedRange] = React.useState("today");
+  const [selectedRange, setSelectedRange] = React.useState("last30"); // Default to "Last 30 days"
   const [isOpen, setIsOpen] = React.useState(false);
   const [compare, setCompare] = React.useState(false);
   const [customRange, setCustomRange] = React.useState("custom");
-  const { fetchAds } = useGlobalContext()
+  const { fetchAds } = useGlobalContext();
   const [dateRange, setDateRange] = React.useState({
-    startDate: new Date(),
+    startDate: new Date(today.setDate(today.getDate() - 30)),
     endDate: new Date()
   });
-  
-  // Add this effect to update dates automatically
+
+  // Update dates based on selected range
   React.useEffect(() => {
     const updateDates = () => {
       const newDates = calculateDateRange(selectedRange);
@@ -47,14 +47,13 @@ const AdsCalendarDialog = () => {
       });
     };
   
-    // Update immediately
     updateDates();
   
-    // Set up interval for daily updates
     const interval = setInterval(updateDates, 86400000); // 24 hours
   
     return () => clearInterval(interval);
   }, [selectedRange]);
+
   const timeRanges = [
     { label: "Today", value: "today" },
     { label: "Yesterday", value: "yesterday" },
@@ -133,17 +132,16 @@ const AdsCalendarDialog = () => {
 
   const handleUpdate = () => {
     const formatDate = (date) => {
-      return date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-    }
+      return date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    };
   
     const dateRange = {
       startDate: formatDate(date.from),
       endDate: formatDate(date.to)
-    }
-    fetchAds(dateRange)
-    setIsOpen(false)
-  }
-  
+    };
+    fetchAds(dateRange);
+    setIsOpen(false);
+  };
 
   const handleCancel = () => {
     setIsOpen(false);

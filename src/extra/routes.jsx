@@ -22,12 +22,10 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import CheckEmail from "@/pages/CheckEmail";
 import StateProvider from "@/functions/features/StateProvider";
-// import { AdminStateProvider } from "@/functions/features/AdminStateProvider";
 import { RulesProvider } from "@/services/RulesContext";
 import MailComposer from "@/services/AdminMail/Mail";
 import { AdminProvider } from "@/components/Admin/Providers/AdminProvider";
 import UsersPage from "@/pages/Admin/Users/UsersPage";
-import Loading from "@/components/Loading";
 import { CreatePlan } from "@/pages/Admin/Plans/CreatePlan";
 import { ManagePlans } from "@/pages/Admin/Plans/ManagePlans";
 import { SubscriptionSuccess } from "@/pages/subscription/success";
@@ -60,8 +58,6 @@ const AdminPublicRoute = ({ children }) => {
 
 const App = lazy(() => import("../App"));
 const PlatformConnectionPage = lazy(() => import("@/components/PlatformConnector"));
-// const DetailedOrders = lazy(() => import("@/pages/Reports/DetailedOrders"));
-// const PurchaseReport = lazy(() => import("@/pages/Reports/PurchaseReport"));
 const PricingDetailsPage = lazy(() => import("@/pages/PricingDetailsPage"));
 
 const UserRoutes = () => (

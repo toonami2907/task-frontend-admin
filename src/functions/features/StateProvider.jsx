@@ -52,9 +52,34 @@ export default function StateProvider({ children }) {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetchParams, setFetchParams] = useState({});
+  const [globalErrors, setGlobalErrors] = useState([]);
   const [isPlatformConnected, setIsPlatformConnected] = useState({ shopify: false, facebook: false });
   const [adsData, setAdsData] = useState(null); // New state for ads data
   const [jobId, setJobId] = useState(null); // New state for job ID
+
+
+  // SSE for global errors
+  useEffect(() => {
+    const eventSource = new EventSource(`${API_URL}/auth/stream-global-errors`, { withCredentials: true });
+    
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.message !== "Connected to global error stream") { // Ignore connection message
+        setGlobalErrors(prev => [...prev, { message: data.message, timestamp: data.timestamp }]);
+      }
+    };
+
+    eventSource.onerror = () => {
+      console.error("SSE connection error");
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+      console.log("SSE connection closed");
+    };
+  }, []);
+
 
   const fetchPlans = useCallback(async () => {
     setLoading(true);
@@ -108,7 +133,6 @@ export default function StateProvider({ children }) {
   
     try {
       await api.get("/auth/fetchOrder", { withCredentials: true });
-      console.log(`fetchAds: Sending payload`, payload);
       const response = await api.post(`${API_URL}/auth/ads`, payload, { withCredentials: true });
       console.log(`fetchAds response:`, response.data);
       if (response.status === 200) {
@@ -116,7 +140,7 @@ export default function StateProvider({ children }) {
         setLoading(false);
       } else if (response.status === 202) {
         setJobId(response.data.jobId);
-        setFetchParams(payload); // Store params for polling
+        setFetchParams(payload); 
       }
     } catch (error) {
       console.error("Error fetching ads:", error.message);
@@ -134,7 +158,6 @@ export default function StateProvider({ children }) {
       });
       console.log(`checkAdsStatus response for ${jobId}:`, response.data);
       if (response.status === 200) {
-        console.log(`checkAdsStatus: Setting adsData for ${jobId}`);
         setAdsData(response.data);
         setJobId(null);
         setLoading(false);
@@ -210,6 +233,7 @@ export default function StateProvider({ children }) {
         fetchAds,
         isPlatformConnected,
         userInfo,
+        globalErrors,
         plans,
         fetchPlans,
         adsData, // Expose ads data to consumers

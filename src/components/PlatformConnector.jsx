@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, AlertCircle, RefreshCcw, HelpCircle, ArrowRight, Unlink } from "lucide-react";
+import { Check, AlertCircle, RefreshCcw, HelpCircle, ArrowRight, Unlink, AlertTriangle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { API_URL, useGlobalContext } from "@/functions/features/StateProvider";
 import {
@@ -14,15 +14,29 @@ import {
 import { useNavigate } from "react-router-dom";
 import { ErrorToast } from "@/hooks/customToast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import  api  from "@/functions/resources/axiosConfig"; // Import your axios instance
+import api  from "@/functions/resources/axiosConfig";
 
 export default function PlatformConnectionPage() {
   const [shopifyStore, setShopifyStore] = useState("");
   const [loading, setLoading] = useState(false);
-  const { isPlatformConnected, fetchAds } = useGlobalContext(); // fetchAds to refresh context
+  const { isPlatformConnected, fetchAds, globalErrors } = useGlobalContext();
   const [accessToken, setAccessToken] = useState("");
   const navigate = useNavigate();
   const UserId = localStorage.getItem("UserId");
+
+  // Display global errors as toasts when they arrive
+  useEffect(() => {
+    globalErrors.forEach(error => {
+      toast.error(error.message, {
+        duration: 5000,
+        position: "top-right",
+        action: {
+          label: "Contact Support",
+          onClick: () => window.location.href = "mailto:support@example.com",
+        },
+      });
+    });
+  }, [globalErrors]);
 
   const renderConnectionStatus = (status) => {
     const statusMap = {
@@ -113,7 +127,7 @@ export default function PlatformConnectionPage() {
     try {
       const response = await api.post('/auth/disconnect-facebook');
       toast.success(response.data.message);
-      window.location.reload()
+      window.location.reload();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to disconnect Facebook Ads");
     } finally {
@@ -126,7 +140,7 @@ export default function PlatformConnectionPage() {
     try {
       const response = await api.post('/auth/disconnect-shopify');
       toast.success(response.data.message);
-      window.location.reload()
+      window.location.reload();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to disconnect Shopify");
     } finally {
@@ -145,6 +159,43 @@ export default function PlatformConnectionPage() {
             Connect your marketing platforms to streamline your workflow
           </p>
         </div>
+
+        {/* Global Errors Section */}
+        {globalErrors.length > 0 && (
+          <Card className="shadow-sm border-red-200">
+            <CardHeader className="bg-red-50">
+              <CardTitle className="text-red-700 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" />
+                System Alerts
+              </CardTitle>
+              <CardDescription className="text-red-600">
+                The following issues have been detected in the system:
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <ul className="space-y-4">
+                {globalErrors.map((error, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm">
+                    <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-red-700">{error.message}</p>
+                      <p className="text-gray-500 text-xs">
+                        {new Date(error.timestamp).toLocaleString()}
+                      </p>
+                      <Button
+                        variant="link"
+                        className="text-blue-600 p-0 h-auto text-xs"
+                        onClick={() => window.location.href = "mailto:support@example.com"}
+                      >
+                        Contact Support
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="space-y-6">
           {/* Connection Status Overview */}
@@ -186,7 +237,7 @@ export default function PlatformConnectionPage() {
                   className="group relative"
                 >
                   <span className="flex items-center">
-                    {isPlatformConnected.facebook ? "connected" : "Connect Facebook"}
+                    {isPlatformConnected.facebook ? "Connected" : "Connect Facebook"}
                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </span>
                 </Button>
@@ -274,7 +325,7 @@ export default function PlatformConnectionPage() {
                     className="group relative"
                   >
                     <span className="flex items-center">
-                      {loading ? "Connecting..." : isPlatformConnected.shopify ? "connected" : "Connect Shopify"}
+                      {loading ? "Connecting..." : isPlatformConnected.shopify ? "Connected" : "Connect Shopify"}
                       <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </span>
                   </Button>

@@ -8,8 +8,5 @@ export default defineConfig({
       '@': '/src', // Map '@' to the 'src' folder
       util: "util/",
     },
-  },
-  server: {
-    port: 3000, // Set the desired port number
-  },
+  }
 });

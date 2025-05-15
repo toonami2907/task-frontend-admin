@@ -1,9 +1,10 @@
-/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { sortPresets } from "@/functions/Preset";
 import api from "../resources/axiosConfig";
 import PropTypes from 'prop-types';
-import Cookies from 'js-cookie'
+import Cookies from 'js-cookie';
+import io from 'socket.io-client';
+import toast from 'react-hot-toast';
 
 export const StateContext = createContext();
 
@@ -34,10 +35,10 @@ export const handleLogout = async () => {
     console.error('Logout error:', error);
   } finally {
     localStorage.clear();
-    Cookies.remove("access_token")
-    Cookies.remove("refresh_token")
+    Cookies.remove("access_token");
+    Cookies.remove("refresh_token");
     window.location.href = '/auth';
-    window.location.reload()
+    window.location.reload();
   }
 };
 
@@ -55,32 +56,151 @@ export default function StateProvider({ children }) {
   const [fetchParams, setFetchParams] = useState({});
   const [globalErrors, setGlobalErrors] = useState([]);
   const [isPlatformConnected, setIsPlatformConnected] = useState({ shopify: false, facebook: false });
-  const [adsData, setAdsData] = useState(null); // New state for ads data
-  const [jobId, setJobId] = useState(null); // New state for job ID
+  const [adsData, setAdsData] = useState(null);
+  const [ordersData, setOrdersData] = useState(null);
+  const [jobId, setJobId] = useState(null);
+  const [orderJobId, setOrderJobId] = useState(null);
+  const [socket, setSocket] = useState(null);
+  const [ran, setRan] = useState(0);
+  const [platformErrors, setPlatformErrors] = useState({
+    shopify: false,
+    facebook: false,
+  });
+  const [sortConfig, setSortConfig] = useState({
+    key: null,
+    direction: 'asc',
+  });
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+  // Update online status
+  const updateOnlineStatus = () => {
+    setIsOnline(navigator.onLine);
+  };
 
-  // SSE for global errors
   useEffect(() => {
-    const eventSource = new EventSource(`${API_URL}/auth/stream-global-errors`, { withCredentials: true });
-    
-    eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.message !== "Connected to global error stream") { // Ignore connection message
-        setGlobalErrors(prev => [...prev, { message: data.message, timestamp: data.timestamp }]);
-      }
-    };
-
-    eventSource.onerror = () => {
-      console.error("SSE connection error");
-      eventSource.close();
-    };
-
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
     return () => {
-      eventSource.close();
-      console.log("SSE connection closed");
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
     };
   }, []);
 
+  const handleSort = (key) => {
+    setSortConfig((currentSort) => {
+      if (currentSort.key === key) {
+        return {
+          key,
+          direction: currentSort.direction === 'asc' ? 'desc' : 'asc',
+        };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  // Socket.IO Setup
+  useEffect(() => {
+    if (!userInfo._id) return;
+
+    const socketInstance = io(API_URL, {
+      withCredentials: true,
+      query: { userId: userInfo._id },
+    });
+
+    socketInstance.on('connect', () => {
+      console.log(`Connected to WebSocket server with userId: ${userInfo._id}`);
+    });
+
+    // Ads-related WebSocket events
+    socketInstance.on('jobStarted', (data) => {
+      console.log('Job started:', data);
+      setLoading(true);
+      setPlatformErrors((prev) => ({ ...prev, facebook: false }));
+      setJobId(data.jobId);
+      toast.loading('Fetching ad data...', { id: 'fetch-ads' });
+    });
+
+    socketInstance.on('jobCompleted', (data) => {
+      setAdsData(data.data);
+      setPlatformErrors((prev) => ({ ...prev, facebook: false }));
+      setLoading(false);
+      setJobId(null);
+      toast.success('Ads data fetched successfully!', { id: 'fetch-ads' });
+    });
+
+    socketInstance.on('jobCompletedWithRateLimit', (data) => {
+      setAdsData(data.data);
+      setPlatformErrors((prev) => ({ ...prev, facebook: true }));
+      setGlobalErrors((prev) => [
+        ...prev,
+        {
+          message: `${data.rateLimitError.title}: ${data.rateLimitError.message}`,
+          error: `Affected ${data.rateLimitError.failedCount} campaigns`,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+      setLoading(false);
+      setJobId(null);
+      toast.error(`Ads fetched with rate limit issues: ${data.rateLimitError.message}`, { id: 'fetch-ads' });
+    });
+
+    socketInstance.on('jobFailed', (data) => {
+      console.log('Job failed:', data);
+      setPlatformErrors((prev) => ({ ...prev, facebook: true }));
+      setGlobalErrors((prev) => [
+        ...prev,
+        { message: data.message, error: data.error, timestamp: new Date().toISOString() },
+      ]);
+      setLoading(false);
+      setJobId(null);
+      toast.error('Failed to fetch ads: ' + data.message, { id: 'fetch-ads' });
+    });
+
+    // Orders-related WebSocket events
+    socketInstance.on('orderJobStarted', (data) => {
+      console.log('Order job started:', data);
+      setLoading(true);
+      setPlatformErrors((prev) => ({ ...prev, shopify: false }));
+      setOrderJobId(data.jobId);
+      toast.loading('Fetching order data...', { id: 'fetch-orders' });
+    });
+
+    socketInstance.on('orderJobCompleted', (data) => {
+      console.log('Order job completed:', data);
+      setOrdersData(data.data);
+      setPlatformErrors((prev) => ({ ...prev, shopify: false }));
+      setLoading(false);
+      setOrderJobId(null);
+      toast.success('Orders data fetched successfully!', { id: 'fetch-orders' });
+    });
+
+    socketInstance.on('orderJobFailed', (data) => {
+      console.log('Order job failed:', data);
+      setPlatformErrors((prev) => ({ ...prev, shopify: true }));
+      setGlobalErrors((prev) => [
+        ...prev,
+        { message: data.message, error: data.error, timestamp: new Date().toISOString() },
+      ]);
+      setLoading(false);
+      setOrderJobId(null);
+      toast.error('Failed to fetch orders: ' + data.message, { id: 'fetch-orders' });
+    });
+
+    socketInstance.on('connect_error', (error) => {
+      console.error('Socket.IO connection error:', error.message);
+    });
+
+    socketInstance.on('error', (err) => {
+      socketInstance.destroy();
+    });
+
+    setSocket(socketInstance);
+
+    return () => {
+      socketInstance.disconnect();
+      console.log('WebSocket disconnected');
+    };
+  }, [userInfo._id]);
 
   const fetchPlans = useCallback(async () => {
     setLoading(true);
@@ -89,6 +209,10 @@ export default function StateProvider({ children }) {
       setPlans(response.data.data);
     } catch (error) {
       console.error("Error fetching plans:", error.message);
+      setGlobalErrors((prev) => [
+        ...prev,
+        { message: "Failed to fetch plans", error: error.message, timestamp: new Date().toISOString() },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -111,83 +235,106 @@ export default function StateProvider({ children }) {
       }));
     } catch (error) {
       console.error("Error while connecting platform:", error.message);
+      setGlobalErrors((prev) => [
+        ...prev,
+        { message: "Failed to connect account", error: error.message, timestamp: new Date().toISOString() },
+      ]);
     }
   }, []);
 
-  // Updated fetchAds to handle worker threads and polling
-  // StateProvider.jsx (relevant parts)
   const fetchAds = useCallback(async (dateRange) => {
+    if (!isOnline) {
+      toast.error('You are currently offline');
+      return;
+    }
+
     setLoading(true);
     setAdsData(null);
     setJobId(null);
-  
+
     const today = new Date();
-    const defaultStartDate = new Date(today.setDate(today.getDate() - 30)).toISOString().split('T')[0];
+    const defaultStartDate = new Date(today.setDate(today.getDate() - 90)).toISOString().split('T')[0];
     const defaultEndDate = new Date().toISOString().split('T')[0];
-    
     const dates = dateRange || { startDate: defaultStartDate, endDate: defaultEndDate };
-    const payload = selectedAdAccount ? { 
-      FACEBOOK_ADS_ACT_ID: selectedAdAccount.id,
-      startDate: dates.startDate,
-      endDate: dates.endDate,
-    } : { startDate: dates.startDate, endDate: dates.endDate };
-  
+    const payload = selectedAdAccount
+      ? {
+          FACEBOOK_ADS_ACT_ID: selectedAdAccount.id,
+          startDate: dates.startDate,
+          endDate: dates.endDate,
+        }
+      : { startDate: dates.startDate, endDate: dates.endDate };
+
     try {
-      await api.get("/auth/fetchOrder", { withCredentials: true });
       const response = await api.post(`${API_URL}/auth/ads`, payload, { withCredentials: true });
-      console.log(`fetchAds response:`, response.data);
       if (response.status === 200) {
         setAdsData(response.data);
         setLoading(false);
       } else if (response.status === 202) {
-        setJobId(response.data.jobId);
-        setFetchParams(payload); 
+        setFetchParams(payload);
+        // WebSocket will handle updates via jobStarted/jobCompleted
       }
     } catch (error) {
       console.error("Error fetching ads:", error.message);
+      setGlobalErrors((prev) => [
+        ...prev,
+        { message: "Failed to fetch ads", error: error.message, timestamp: new Date().toISOString() },
+      ]);
       setLoading(false);
+      toast.error('Failed to initiate ads fetch: ' + error.message);
     }
-  }, [selectedAdAccount]);
+  }, [selectedAdAccount, isOnline]);
 
-  const checkAdsStatus = useCallback(async () => {
-    if (!jobId) return;
+  const fetchOrders = useCallback(async (dateRange) => {
+    if (!isOnline) {
+      toast.error('You are currently offline');
+      return;
+    }
+
+    setLoading(true);
+    setOrdersData(null);
+    setOrderJobId(null);
+
+    const today = new Date();
+    const defaultStartDate = new Date(today.setDate(today.getDate() - 90)).toISOString().split('T')[0];
+    const defaultEndDate = new Date().toISOString().split('T')[0];
+    const dates = dateRange || { startDate: defaultStartDate, endDate: defaultEndDate };
+    const payload = {
+      startDate: dates.startDate,
+      endDate: dates.endDate,
+      page: 1, // Default page
+      limit: 100, // Default limit
+    };
 
     try {
-      const response = await api.get(`${API_URL}/auth/ads/status/${jobId}`, {
-        params: fetchParams, // Pass original fetch parameters
+      const response = await api.get(`${API_URL}/auth/fetchOrder`, {
+        params: payload,
         withCredentials: true,
       });
-      console.log(`checkAdsStatus response for ${jobId}:`, response.data);
       if (response.status === 200) {
-        setAdsData(response.data);
-        setJobId(null);
+        setOrdersData(response.data);
         setLoading(false);
-      } else {
-        console.log(`checkAdsStatus: Still processing ${jobId}`);
+        toast.success('Orders data loaded from cache');
+      } else if (response.status === 202) {
+        setFetchParams(payload);
+        // WebSocket will handle updates via orderJobStarted/orderJobCompleted
       }
     } catch (error) {
-      console.error("Error checking ads status:", error.message);
+      console.error("Error fetching orders:", error.message);
+      setGlobalErrors((prev) => [
+        ...prev,
+        { message: "Failed to fetch orders", error: error.message, timestamp: new Date().toISOString() },
+      ]);
       setLoading(false);
+      toast.error('Failed to initiate orders fetch: ' + error.message);
     }
-  }, [jobId, fetchParams]);
+  }, [isOnline]);
 
-  // Polling logic
-  useEffect(() => {
-    if (jobId) {
-      const interval = setInterval(() => {
-        checkAdsStatus();
-      }, 5000); // Poll every 5 seconds
-      return () => clearInterval(interval);
-    }
-  }, [jobId, checkAdsStatus]);
-  // Initial setup
   useEffect(() => {
     fetchPlans();
     const act_id = localStorage.getItem('Adsaccount');
     if (act_id) {
       setSelectedAdAccount(JSON.parse(act_id));
     } else {
-      // Fetch user profile to set default ad account
       connectAccount().then(() => {
         if (userInfo.adAccounts?.length) {
           setSelectedAdAccount(userInfo.adAccounts[0]);
@@ -197,20 +344,24 @@ export default function StateProvider({ children }) {
     }
   }, [fetchPlans, connectAccount]);
 
-  // Poll every 5 seconds when jobId exists
-
-  // Initialize customColumn and fetch initial data
   useEffect(() => {
     const storedCustomColumn = localStorage.getItem("customColumn");
     setCustomColumn(storedCustomColumn ? JSON.parse(storedCustomColumn) : sortPresets(selectedPresets));
     connectAccount();
-    // Only fetchAds if explicitly needed, not on every state change
   }, [connectAccount, selectedPresets]);
 
-  // Save customColumn to localStorage
   useEffect(() => {
     if (customColumn) localStorage.setItem("customColumn", JSON.stringify(customColumn));
   }, [customColumn]);
+
+  useEffect(() => {
+    if (!isOnline) {
+      toast.error('You are currently offline');
+    }
+    if (selectedAdAccount) {
+      fetchAds();
+    }
+  }, [selectedAdAccount, fetchAds]);
 
   return (
     <StateContext.Provider
@@ -218,6 +369,7 @@ export default function StateProvider({ children }) {
         state,
         setState,
         customColumn,
+        platformErrors,
         setCustomColumn,
         selectedPresets,
         setSelectedPresets,
@@ -232,12 +384,16 @@ export default function StateProvider({ children }) {
         loading,
         setLoading,
         fetchAds,
+        fetchOrders,
         isPlatformConnected,
         userInfo,
         globalErrors,
         plans,
+        sortConfig,
+        handleSort,
         fetchPlans,
-        adsData, // Expose ads data to consumers
+        adsData,
+        ordersData,
       }}
     >
       {children}

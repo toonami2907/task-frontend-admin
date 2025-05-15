@@ -29,7 +29,7 @@ import { useGlobalContext } from "@/functions/features/StateProvider"
 export function AppSidebar({
   ...props
 }) {
-  const {userInfo} = useGlobalContext()
+  const {userInfo,platformErrors} = useGlobalContext()
 
   const data = {
     user: {
@@ -84,7 +84,11 @@ export function AppSidebar({
           {
             title: "Integrations",
             url: "/user/platform",
-          },
+            badge: platformErrors.facebook && (
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            )
+          }
+          ,
           {
             title: "Billing",
             url: "/billing/pricing",

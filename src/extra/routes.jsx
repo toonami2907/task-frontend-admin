@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { lazy } from "react";
 import Layout from "./Layout2";
 import FacebookCallback from "@/components/FBCallback";
+import PrivacyPolicy from "@/components/privacy-policy";
 import AuthPages from "@/components/AuthPages";
 import IntegrationsPage from "@/pages/IntegrationsPage";
 import ShopifyConnectionSuccess from "@/components/ConnectionSuccessPage";
@@ -73,6 +74,7 @@ const UserRoutes = () => (
         <Route path="/auth/google/callback" element={<PublicRoute><GoogleCallback /></PublicRoute>} />
         <Route path="/info/faqs" element={<PublicRoute><FAQs/></PublicRoute>} />
         <Route path="/pricing" element={<PricingDetailsPage />} />
+        <Route path="/privacy/policy" element={<PrivacyPolicy />} />
         <Route path="/shopify/success" element={<ProtectedRoute><ShopifyConnectionSuccess /></ProtectedRoute>} />
         <Route 
           path="/subscription/success"

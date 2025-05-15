@@ -12,7 +12,8 @@ const AdAccountSelector = () => {
   const { 
     userInfo: user, 
     selectedAdAccount, 
-    updateSelectedAdAccount 
+    updateSelectedAdAccount,
+    fetchAds
   } = useGlobalContext();
 
   useEffect(() => {

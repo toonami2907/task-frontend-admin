@@ -26,7 +26,7 @@ import { notificationConsumer } from "@/services/RabbitMq/consumer";
 function Layout() {
   const UserId = localStorage.getItem("UserId");
   const [isAuthenticated, setIsAuthenticated] = useState(null);
-  const { isPlatformConnected } = useGlobalContext();
+  const { isPlatformConnected, platformErrors } = useGlobalContext();
 
   // useEffect(() => {
   //   if (UserId) {
@@ -34,7 +34,7 @@ function Layout() {
   //   }
   //   return () => notificationConsumer.close();
   // }, [UserId]);
-  
+
   useEffect(() => {
     const verifyUser = async () => {
       try {
@@ -43,7 +43,7 @@ function Layout() {
       } catch (error) {
         if (error.response?.status === 403) {
           localStorage.removeItem("UserId");
-          window.location.href='/auth'
+          window.location.href = "/auth";
           setIsAuthenticated(false);
         }
       }
@@ -77,13 +77,16 @@ function Layout() {
                   </Breadcrumb>
                 </div>
                 <div className="px-4 flex items-center gap-2 py-2">
-                  <h1 className="hidden text-xs text-black sm:block sm:text-sm">Connected Platform Status:</h1>
+                  <h1 className="hidden text-xs text-black sm:block sm:text-sm">
+                    Connected Platform Status:
+                  </h1>
                   <div
                     className={`w-2 h-2 rounded-full ${
-                      isPlatformConnected.shopify === true &&
-                      isPlatformConnected.facebook === true
+                      isPlatformConnected.shopify &&
+                      isPlatformConnected.facebook &&
+                      !platformErrors.facebook
                         ? "bg-green-500"
-                        : "bg-red-500"
+                        : "bg-red-500 animate-pulse"
                     }`}
                   />
                 </div>

@@ -9,6 +9,7 @@ import { api } from "@/context/StateProvider";
 import { formatDistanceToNow } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { getSocket } from "@/services/admin-socket.service";
 
 export function AdminTaskMessages({ jobId, taskId, messages, onNewMessage }) {
   const [newMessage, setNewMessage] = useState("");
@@ -16,7 +17,7 @@ export function AdminTaskMessages({ jobId, taskId, messages, onNewMessage }) {
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const { toast } = useToast();
-
+  const adminId = localStorage.getItem('adminId');
   // Scroll to bottom conditionally
   // useEffect(() => {
   //   const chatContainer = chatContainerRef.current;
@@ -41,24 +42,40 @@ export function AdminTaskMessages({ jobId, taskId, messages, onNewMessage }) {
     
     try {
       setIsSending(true);
-      const response = await axios.post(
-        `${api}/api/v1/jobs/${jobId}/tasks/${taskId}/messages`,
-        { text: newMessage },
-        {
-          withCredentials: true,
-          headers: {
-            'Authorization': `Bearer ${Cookies.get('admin_access_token')}`
-          }
-        }
-      );
-      
-      const newMsg = response.data.data;
+      const socket = getSocket();
+      const tempMessage = {
+        id: `temp-${Date.now()}`,
+        sender: 'Administrator',
+        senderName: 'Admin',
+        text: newMessage,
+        createdAt: new Date().toISOString(),
+        status: 'sent',
+      };
+      setNewMessage((prev) => [...prev, tempMessage])
+      // const response = await axios.post(
+      //   `${api}/api/v1/jobs/${jobId}/tasks/${taskId}/messages`,
+      //   { text: newMessage },
+      //   {
+      //     withCredentials: true,
+      //     headers: {
+      //       'Authorization': `Bearer ${Cookies.get('admin_access_token')}`
+      //     }
+      //   }
+      // );
+      socket.emit('task-message', {
+        jobId: jobId,
+        taskId: taskId,
+        text: newMessage,
+        senderType: 'admin',
+        senderId: adminId,
+      });
+      // const newMsg = response.data.data;
       setNewMessage("");
       
       // Notify parent component
-      if (onNewMessage) {
-        onNewMessage(newMsg);
-      }
+      // if (onNewMessage) {
+      //   onNewMessage(newMsg);
+      // }
       
       toast({
         title: "Success",

@@ -496,7 +496,7 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full hide-scrollbar">
       <CardHeader>
         <CardTitle className="text-xl font-semibold text-black">Add New Job</CardTitle>
         <p className="text-md text-gray-900 font-medium">Job has multiple tasks assigned to teams or employees</p>

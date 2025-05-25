@@ -18,23 +18,7 @@ export function AdminTaskMessages({ jobId, taskId, messages, onNewMessage }) {
   const chatContainerRef = useRef(null);
   const { toast } = useToast();
   const adminId = localStorage.getItem('adminId');
-  // Scroll to bottom conditionally
-  // useEffect(() => {
-  //   const chatContainer = chatContainerRef.current;
-  //   if (!chatContainer) return;
 
-  //   // Check if user is near the bottom (within 100px)
-  //   const isNearBottom =
-  //     chatContainer.scrollHeight - chatContainer.scrollTop <=
-  //     chatContainer.clientHeight + 100;
-
-  //   // Only scroll if near bottom or a new message was sent
-  //   if (isNearBottom && messagesEndRef.current) {
-  //     setTimeout(() => {
-  //       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-  //     }, 100); // Small delay to ensure DOM updates
-  //   }
-  // }, [messages]);
 
   // Send a new message
   const sendMessage = async () => {
@@ -52,16 +36,7 @@ export function AdminTaskMessages({ jobId, taskId, messages, onNewMessage }) {
         status: 'sent',
       };
       setNewMessage((prev) => [...prev, tempMessage])
-      // const response = await axios.post(
-      //   `${api}/api/v1/jobs/${jobId}/tasks/${taskId}/messages`,
-      //   { text: newMessage },
-      //   {
-      //     withCredentials: true,
-      //     headers: {
-      //       'Authorization': `Bearer ${Cookies.get('admin_access_token')}`
-      //     }
-      //   }
-      // );
+ 
       socket.emit('task-message', {
         jobId: jobId,
         taskId: taskId,
@@ -71,19 +46,6 @@ export function AdminTaskMessages({ jobId, taskId, messages, onNewMessage }) {
       });
       // const newMsg = response.data.data;
       setNewMessage("");
-      
-      // Notify parent component
-      // if (onNewMessage) {
-      //   onNewMessage(newMsg);
-      // }
-      
-      toast({
-        title: "Success",
-        description: "Message sent successfully",
-        variant: "success",
-        className:
-          "bg-[#10B981] border-[#065F46] text-[#FFFFFF] border shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] rounded-md p-4",
-      });
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
@@ -97,9 +59,10 @@ export function AdminTaskMessages({ jobId, taskId, messages, onNewMessage }) {
       setIsSending(false);
     }
   };
+  // console.log('messages', messages)
 
   return (
-    <Card className="h-fit shadow-none flex flex-col">
+    <Card className="h-fit shadow-none flex flex-col hide-scrollbar">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg">Task Communication</CardTitle>
       </CardHeader>
@@ -113,9 +76,9 @@ export function AdminTaskMessages({ jobId, taskId, messages, onNewMessage }) {
               No messages yet
             </div>
           ) : (
-            messages.map((msg) => (
+            messages.map((msg, idx) => (
               <motion.div
-                key={msg.id}
+                key={idx}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -126,7 +89,7 @@ export function AdminTaskMessages({ jobId, taskId, messages, onNewMessage }) {
                 }`}
               >
                 <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                  {msg.senderName}
+                 {msg.sender} {" "} {msg.senderId || msg.staffId  ? `(${msg.senderId || msg.staffId})` : ""}
                 </p>
                 <p className="text-sm">{msg.text}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { connectAdminSocket, disconnectAdminSocket, onAdminNotification } from "@/services/admin-socket.service";
 import { AdminTaskDetailModal } from "@/components/admin-task-detail-modal";
+import { cn } from "@/lib/utils";
 
 // Function to format remaining time as a digital clock
 const formatRemainingTime = (deadlineDate, currentDate) => {
@@ -46,8 +47,7 @@ const formatRemainingTime = (deadlineDate, currentDate) => {
 // Function to format reminder information
 const formatReminderInfo = (task) => {
   if (!task.reminder) return "No reminders";
-  
-  const { frequency, channels } = task.reminder;
+    const { frequency, channels } = task.reminder;
   let frequencyText = "";
   
   switch (frequency) {
@@ -80,7 +80,7 @@ const formatReminderInfo = (task) => {
   if (channels?.email) channelsText.push("Email");
   if (channels?.pwaNotification) channelsText.push("Push");
   
-  return `${frequencyText} at ${task.reminder.time} via ${channelsText.join(", ")}`;
+  return `${frequencyText} at ${task.reminder.startTime} via ${channelsText.join(", ")}`;
 };
 
 const Job = () => {
@@ -324,25 +324,27 @@ const Job = () => {
   );
 
   return (
-    <main className="max-w-screen-xl mx-auto bg-neutral-100 dark:bg-[#131313] p-6">
-      <div className="flex flex-col gap-6">
+ <main className="max-w-screen-xl mx-auto bg-neutral-100 overflow-y-auto dark:bg-[#131313] hide-scrollbar p-4 sm:p-6 lg:p-8 max-h-[800px] h-[600px]">
+      <div className="flex flex-col gap-4 sm:gap-6 ">
         {/* Header Section */}
-        <div className="flex w-full justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Jobs Summary</h1>
-          <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row w-full justify-between items-start sm:items-center gap-4 sm:gap-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Jobs Summary
+          </h1>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <Input
               type="text"
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-64 h-10 text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 border-gray-300 dark:border-gray-600 rounded-md focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm"
+              className="w-full sm:w-48 lg:w-64 h-9 sm:h-10 text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 border-gray-300 dark:border-gray-600 rounded-md focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm text-sm sm:text-base"
             />
             <ModalTrigger onClick={() => setIsModalOpen(true)}>
-              <Button className="bg-[#3B82F6] text-white hover:bg-[#1E40AF] rounded-md px-4 py-2">
+              <Button className="bg-[#3B82F6] text-white hover:bg-[#1E40AF] rounded-md px-3 py-1 sm:px-4 sm:py-2 text-sm sm:text-base w-full sm:w-auto">
                 Add New Job
               </Button>
             </ModalTrigger>
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-2xl">
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-4xl hide-scrollbar">
               <AddNewJobForm onCancel={() => setIsModalOpen(false)} onSubmit={handleJobSubmit} />
             </Modal>
           </div>
@@ -354,17 +356,18 @@ const Job = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#3B82F6]"></div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse rounded-lg overflow-hidden">
+          <div className="flex-1 overflow-y-auto hide-scrollbar max-h-[400px] h-full">
+            {/* Table for larger screens */}
+            <table className="hidden sm:table w-full border-collapse rounded-lg overflow-hidden">
               <thead>
-                <tr className="bg-gray-50 dark:bg-gray-800 border text-gray-700 dark:text-gray-300 text-sm font-semibold">
-                  <th className="p-3 text-left">Job</th>
-                  <th className="p-3 text-left">Status</th>
-                  <th className="p-3 text-left">Deadline</th>
-                  <th className="p-3 text-left">Remaining Time</th>
-                  <th className="p-3 text-left">Task Completed</th>
-                  <th className="p-3 text-left">Messages</th>
-                  <th className="p-3 text-center">Actions</th>
+                <tr className="bg-gray-50 dark:bg-gray-800 border text-gray-700 dark:text-gray-300 text-xs sm:text-sm font-semibold">
+                  <th className="p-2 sm:p-3 text-left">Job</th>
+                  <th className="p-2 sm:p-3 text-left">Status</th>
+                  <th className="p-2 sm:p-3 text-left">Deadline</th>
+                  <th className="p-2 sm:p-3 text-left">Remaining Time</th>
+                  <th className="p-2 sm:p-3 text-left">Task Completed</th>
+                  <th className="p-2 sm:p-3 text-left">Messages</th>
+                  <th className="p-2 sm:p-3 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -372,7 +375,7 @@ const Job = () => {
                   <tr>
                     <td
                       colSpan="7"
-                      className="p-4 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 border-b"
+                      className="p-4 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 border-b text-sm"
                     >
                       No jobs found.
                     </td>
@@ -391,10 +394,13 @@ const Job = () => {
                           setShowTasksModal(true);
                         }}
                       >
-                        <td className="p-3 text-gray-900 dark:text-gray-100 font-semibold">{job.jobTitle}</td>
-                        <td className="p-3">
+                        <td className="p-2 sm:p-3 text-gray-900 dark:text-gray-100 font-semibold text-sm">
+                          {job.jobTitle}
+                        </td>
+                        <td className="p-2 sm:p-3">
                           <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            className={cn(
+                              'px-2 py-1 rounded-full text-xs font-medium',
                               job.status === "in progress"
                                 ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
                                 : job.status === "completed"
@@ -404,24 +410,24 @@ const Job = () => {
                                 : job.status === "pending"
                                 ? "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300"
                                 : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
-                            }`}
+                            )}
                           >
                             {job.status}
                           </span>
                         </td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100 font-semibold">
+                        <td className="p-2 sm:p-3 text-gray-900 dark:text-gray-100 font-semibold text-sm">
                           {job.jobDeadline ? format(new Date(job.jobDeadline), "EEE, MMM dd, yyyy") : "No deadline"}
                         </td>
-                        <td className="p-3 text-gray-950 dark:text-gray-100 font-bold text-sm">
+                        <td className="p-2 sm:p-3 text-gray-950 dark:text-gray-100 font-bold text-sm">
                           {remainingTime}
                         </td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100 font-medium">
+                        <td className="p-2 sm:p-3 text-gray-900 dark:text-gray-100 font-medium text-sm">
                           {job.tasksCompleted || 0}/{job.tasksCount || 0}
                         </td>
-                        <td className="p-3 text-gray-600 dark:text-gray-300 text-sm">
+                        <td className="p-2 sm:p-3 text-gray-600 dark:text-gray-300 text-sm">
                           {job.latestMessage || "No messages"}
                         </td>
-                        <td className="p-3 text-center">
+                        <td className="p-2 sm:p-3 text-center">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" className="h-8 w-8 p-0">
@@ -450,20 +456,117 @@ const Job = () => {
                 )}
               </tbody>
             </table>
+
+            {/* Card layout for mobile screens */}
+            <div className="sm:hidden flex flex-col gap-4">
+              {filteredJobs.length === 0 ? (
+                <div className="p-4 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 rounded-lg shadow-sm">
+                  No jobs found.
+                </div>
+              ) : (
+                filteredJobs.map((job) => {
+                  const deadlineDate = job.jobDeadline ? new Date(job.jobDeadline) : null;
+                  const remainingTime = formatRemainingTime(deadlineDate, currentTime);
+
+                  return (
+                    <div
+                      key={job.id}
+                      className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      onClick={() => {
+                        setSelectedJob(job);
+                        setShowTasksModal(true);
+                      }}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
+                          {job.jobTitle}
+                        </h3>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              className="text-red-600 cursor-pointer flex items-center"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setJobToDelete(job);
+                                setShowDeleteDialog(true);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Job
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 dark:text-gray-400">Status:</span>
+                          <span
+                            className={cn(
+                              'px-2 py-1 rounded-full text-xs font-medium',
+                              job.status === "in progress"
+                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                                : job.status === "completed"
+                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                : job.status === "blocked"
+                                ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                                : job.status === "pending"
+                                ? "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300"
+                                : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
+                            )}
+                          >
+                            {job.status}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 dark:text-gray-400">Deadline:</span>
+                          <span className="text-gray-900 dark:text-gray-100 font-semibold">
+                            {job.jobDeadline ? format(new Date(job.jobDeadline), "EEE, MMM dd, yyyy") : "No deadline"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 dark:text-gray-400">Remaining Time:</span>
+                          <span className="text-gray-950 dark:text-gray-100 font-bold">
+                            {remainingTime}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 dark:text-gray-400">Tasks Completed:</span>
+                          <span className="text-gray-900 dark:text-gray-100">
+                            {job.tasksCompleted || 0}/{job.tasksCount || 0}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 dark:text-gray-400">Messages:</span>
+                          <span className="text-gray-600 dark:text-gray-300">
+                            {job.latestMessage || "No messages"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
 
         {/* Pagination Section */}
-        <div className="flex justify-end gap-2 mt-4">
+        <div className="flex justify-end gap-2 my-4">
           <Button
             variant="outline"
-            className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-4 py-2"
+            className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-3 py-1 sm:px-4 sm:py-2 text-sm"
           >
             Previous
           </Button>
           <Button
             variant="outline"
-            className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-4 py-2"
+            className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-3 py-1 sm:px-4 sm:py-2 text-sm"
           >
             Next
           </Button>
@@ -478,25 +581,27 @@ const Job = () => {
           if (!open) setJobToDelete(null);
         }}
       >
-        <AlertDialogContent className="bg-white dark:bg-gray-900">
+        <AlertDialogContent className="bg-white dark:bg-gray-900 w-[90%] sm:w-full max-w-md rounded-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900 dark:text-gray-100">
+            <AlertDialogTitle className="text-gray-900 dark:text-gray-100 text-lg sm:text-xl">
               Are you sure you want to delete this job?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600 dark:text-gray-400">
+            <AlertDialogDescription className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
               This action cannot be undone. This will permanently delete the job
               "{jobToDelete?.jobTitle}" and all associated tasks.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting} className="text-sm sm:text-base">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
                 handleDeleteJob();
               }}
               disabled={isDeleting}
-              className="bg-[#EF4444] hover:bg-[#991B1B] text-white"
+              className="bg-[#EF4444] hover:bg-[#991B1B] text-white text-sm sm:text-base"
             >
               {isDeleting ? "Deleting..." : "Delete Job"}
             </AlertDialogAction>
@@ -505,10 +610,10 @@ const Job = () => {
       </AlertDialog>
 
       {/* Task Details Modal */}
-      <Modal isOpen={showTasksModal} onClose={() => setShowTasksModal(false)} className="max-w-3xl">
-        <div className="p-6">
+      <Modal isOpen={showTasksModal} onClose={() => setShowTasksModal(false)} className="w-[95%] sm:max-w-4xl hide-scrollbar">
+        <div className="p-4 sm:p-6 hide-scrollbar">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">
               {selectedJob?.jobTitle} - Tasks
             </h2>
             <Button variant="ghost" size="icon" onClick={() => setShowTasksModal(false)}>
@@ -520,27 +625,28 @@ const Job = () => {
             <div className="space-y-4">
               {selectedJob.tasks.map((task, index) => (
                 <div key={index} className="border rounded-md p-4 bg-white dark:bg-gray-900">
-                  <div className="flex justify-between">
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{task.title}</h3>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base">{task.title}</h3>
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      className={cn(
+                        'px-2 py-1 rounded-full text-xs font-medium',
                         task.isCompleted
                           ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                           : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-                      }`}
+                      )}
                     >
                       {task.isCompleted ? "Completed" : "Pending"}
                     </span>
                   </div>
 
                   {task.description && (
-                    <p className="text-gray-600 dark:text-gray-300 mt-2">{task.description}</p>
+                    <p className="text-gray-600 dark:text-gray-300 mt-2 text-sm">{task.description}</p>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mt-3">
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Deadline</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                      <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
                         {task.deadline
                           ? format(new Date(task.deadline), "MMM dd, yyyy HH:mm")
                           : "No deadline"}
@@ -549,7 +655,7 @@ const Job = () => {
 
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Assigned to</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                      <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
                         {task.resources?.teams?.length > 0 || task.resources?.employees?.length > 0
                           ? `${task.resources.teams.length} teams, ${task.resources.employees.length} employees`
                           : "No assignments"}
@@ -562,7 +668,7 @@ const Job = () => {
                       <Bell className="h-4 w-4 text-gray-500 dark:text-gray-400 mt-0.5 mr-2" />
                       <div>
                         <p className="text-sm text-gray-500 dark:text-gray-400">Reminder</p>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
+                        <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
                           {formatReminderInfo(task)}
                         </p>
                       </div>
@@ -584,7 +690,7 @@ const Job = () => {
                     <Button 
                       size="sm" 
                       variant="outline"
-                      className="flex items-center gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                      className="flex items-center gap-1 text-blue-600 border-blue-200 hover:bg-blue-50 text-xs sm:text-sm"
                       onClick={(e) => handleOpenTaskDetail(selectedJob.id, task._id, e)}
                     >
                       <MessageSquare className="h-4 w-4" />
@@ -595,7 +701,9 @@ const Job = () => {
               ))}
             </div>
           ) : (
-            <p className="text-center text-gray-500 dark:text-gray-400 py-4">No tasks found for this job.</p>
+            <p className="text-center text-gray-500 dark:text-gray-400 py-4 text-sm sm:text-base">
+              No tasks found for this job.
+            </p>
           )}
         </div>
       </Modal>

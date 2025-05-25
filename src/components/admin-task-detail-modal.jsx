@@ -78,6 +78,7 @@ export function AdminTaskDetailModal({ isOpen, onClose, jobId, taskId }) {
                       _id: newMessage.id,
                       staffId: newMessage.senderId,
                       responseType: 'text',
+                      // senderId
                       responseText: newMessage.text,
                       createdAt: newMessage.createdAt,
                     },
@@ -125,6 +126,7 @@ export function AdminTaskDetailModal({ isOpen, onClose, jobId, taskId }) {
         ...(task.messages || []).map((msg) => ({
           id: msg._id,
           sender: msg.sender,
+          senderId: msg.senderId || msg.staffId,
           senderName: msg.senderName || 'Administrator',
           text: msg.text,
           createdAt: new Date(msg.createdAt),
@@ -132,6 +134,7 @@ export function AdminTaskDetailModal({ isOpen, onClose, jobId, taskId }) {
         ...(task.responses || []).map((res) => ({
           id: res._id,
           sender: 'staff',
+          senderId: res.staffId || res.senderId,
           senderName: res.staffName || task.resources?.employees[0]?.fullName || 'Staff',
           text: res.responseText,
           createdAt: new Date(res.createdAt),
@@ -140,7 +143,7 @@ export function AdminTaskDetailModal({ isOpen, onClose, jobId, taskId }) {
     : [];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-3xl">
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-4xl hide-scrollbar">
       <div className="p-6 bg-white dark:bg-gray-900">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">

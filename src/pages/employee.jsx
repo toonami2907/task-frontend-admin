@@ -196,185 +196,195 @@ export default function EmployeesPage() {
   };
 
   return (
-    <div className="p-6 max-w-screen-lg mx-auto">
-      <Toaster position="top-center" />
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h1 className="text-2xl font-bold">Employees</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Total: {companyEmployeesCount} employee
-            {companyEmployeesCount !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <Button onClick={() => setOpen(true)}>New Employee</Button>
+    <div className="p-4 sm:p-6 max-w-screen-lg mx-auto min-h-screen">
+  <Toaster position="top-center" />
+  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4">
+    <div>
+      <h1 className="text-xl sm:text-2xl font-bold">Employees</h1>
+      <p className="text-xs sm:text-sm text-gray-500 mt-1">
+        Total: {companyEmployeesCount} employee
+        {companyEmployeesCount !== 1 ? "s" : ""}
+      </p>
+    </div>
+    <Button onClick={() => setOpen(true)} className="mt-2 sm:mt-0 w-full sm:w-auto">
+      New Employee
+    </Button>
+  </div>
+  {isLoading || globalLoading ? (
+    <div className="flex justify-center items-center h-40">
+      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+  ) : (
+    <div className="border rounded-md">
+      <div className="grid grid-cols-1 sm:grid-cols-5 p-2 sm:p-3 font-semibold bg-gray-100 text-xs sm:text-sm">
+        <div>Full Name</div>
+        <div>Email</div>
+        <div>Position</div>
+        <div>Teams</div>
+        <div className="text-center">Actions</div>
       </div>
-      {isLoading || globalLoading ? (
-        <div className="flex justify-center items-center h-40">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+      {currentEmployees.length > 0 ? (
+        <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
+          {currentEmployees.map((employee) => (
+            <div
+              key={employee.id}
+              className="grid grid-cols-1 sm:grid-cols-5 p-2 sm:p-3 border-t text-sm"
+            >
+              <div className="line-clamp-1">{employee.fullName}</div>
+              <div className="line-clamp-1">{employee.email}</div>
+              <div className="line-clamp-1">{employee.position}</div>
+              <div className="line-clamp-1">
+                {employee.teams && employee.teams.length > 0
+                  ? employee.teams
+                      .map((team) => team.name)
+                      .join(", ")
+                  : "None"}
+              </div>
+              <div className="flex justify-center">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Open menu</span>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      className="text-red-600 cursor-pointer flex items-center text-sm"
+                      onClick={() => {
+                        setEmployeeToDelete(employee);
+                        setShowDeleteDialog(true);
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Employee
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
-        <div className="border rounded-md">
-          <div className="grid grid-cols-5 p-3 font-semibold bg-gray-100">
-            <div>Full Name</div>
-            <div>Email</div>
-            <div>Position</div>
-            <div>Teams</div>
-            <div className="text-center">Actions</div>
-          </div>
-          {currentEmployees.length > 0 ? (
-            currentEmployees.map((employee) => (
-              <div
-                key={employee.id}
-                className="grid grid-cols-5 p-3 border-t"
-              >
-                <div>{employee.fullName}</div>
-                <div>{employee.email}</div>
-                <div>{employee.position}</div>
-                <div>
-                  {employee.teams && employee.teams.length > 0
-                    ? employee.teams
-                        .map((team) => team.name)
-                        .join(", ")
-                    : "None"}
-                </div>
-                <div className="flex justify-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        className="text-red-600 cursor-pointer flex items-center"
-                        onClick={() => {
-                          setEmployeeToDelete(employee);
-                          setShowDeleteDialog(true);
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Employee
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="p-3 text-center text-gray-500">
-              No employees found.
-            </div>
-          )}
+        <div className="p-3 text-center text-gray-500 text-sm">
+          No employees found.
         </div>
       )}
-      <div className="flex justify-end mt-4 gap-2">
-        <Button
-          variant="outline"
-          onClick={handlePrevious}
-          disabled={currentPage === 1}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          onClick={handleNext}
-          disabled={currentPage === totalPages || totalPages === 0}
-        >
-          Next
-        </Button>
-      </div>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New Employee</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Create a new employee profile
-            </p>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                placeholder="Employee Full Name"
-                value={formData.fullName}
-                onChange={handleInputChange}
-              />
-              {errors.fullName && (
-                <p className="text-red-500 text-sm">
-                  {errors.fullName}
-                </p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Employee Email"
-                value={formData.email}
-                onChange={handleInputChange}
-              />
-              {errors.email && (
-                <p className="text-red-500 text-sm">{errors.email}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="position">Position</Label>
-              <Input
-                id="position"
-                placeholder="Employee Position"
-                value={formData.position}
-                onChange={handleInputChange}
-              />
-              {errors.position && (
-                <p className="text-red-500 text-sm">
-                  {errors.position}
-                </p>
-              )}
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Submitting..." : "Submit"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this employee?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the employee
-              "{employeeToDelete?.fullName}" and remove them from all teams.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleDeleteEmployee();
-              }}
-              disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isDeleting ? "Deleting..." : "Delete Employee"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
+  )}
+  <div className="flex justify-end mt-3 sm:mt-4 gap-2">
+    <Button
+      variant="outline"
+      onClick={handlePrevious}
+      disabled={currentPage === 1}
+      className="px-2 py-1 sm:px-3 sm:py-1 text-sm"
+    >
+      Previous
+    </Button>
+    <Button
+      variant="outline"
+      onClick={handleNext}
+      disabled={currentPage === totalPages || totalPages === 0}
+      className="px-2 py-1 sm:px-3 sm:py-1 text-sm"
+    >
+      Next
+    </Button>
+  </div>
+  <Dialog open={open} onOpenChange={setOpen}>
+    <DialogContent className="w-[90%] rounded-md sm:max-w-md p-4 sm:p-6">
+      <DialogHeader>
+        <DialogTitle className="text-lg sm:text-xl">Add New Employee</DialogTitle>
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          Create a new employee profile
+        </p>
+      </DialogHeader>
+      <form onSubmit={handleSubmit} className="grid gap-2 sm:gap-4 py-2 sm:py-4">
+        <div className="grid gap-1 sm:gap-2">
+          <Label htmlFor="fullName" className="text-xs sm:text-sm">Full Name</Label>
+          <Input
+            id="fullName"
+            placeholder="Employee Full Name"
+            value={formData.fullName}
+            onChange={handleInputChange}
+            className="text-sm"
+          />
+          {errors.fullName && (
+            <p className="text-red-500 text-xs">{errors.fullName}</p>
+          )}
+        </div>
+        <div className="grid gap-1 sm:gap-2">
+          <Label htmlFor="email" className="text-xs sm:text-sm">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="Employee Email"
+            value={formData.email}
+            onChange={handleInputChange}
+            className="text-sm"
+          />
+          {errors.email && (
+            <p className="text-red-500 text-xs">{errors.email}</p>
+          )}
+        </div>
+        <div className="grid gap-1 sm:gap-2">
+          <Label htmlFor="position" className="text-xs sm:text-sm">Position</Label>
+          <Input
+            id="position"
+            placeholder="Employee Position"
+            value={formData.position}
+            onChange={handleInputChange}
+            className="text-sm"
+          />
+          {errors.position && (
+            <p className="text-red-500 text-xs">{errors.position}</p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isLoading}
+            className="text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1"
+          >
+            {isLoading ? "Submitting..." : "Submit"}
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>
+
+  {/* Delete Confirmation Dialog */}
+  <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+    <AlertDialogContent className="w-[90%] sm:max-w-md p-4 sm:p-6">
+      <AlertDialogHeader>
+        <AlertDialogTitle className="text-lg sm:text-xl">Are you sure you want to delete this employee?</AlertDialogTitle>
+        <AlertDialogDescription className="text-sm sm:text-base">
+          This action cannot be undone. This will permanently delete the employee
+          "{employeeToDelete?.fullName}" and remove them from all teams.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel disabled={isDeleting} className="text-sm">Cancel</AlertDialogCancel>
+        <AlertDialogAction
+          onClick={(e) => {
+            e.preventDefault();
+            handleDeleteEmployee();
+          }}
+          disabled={isDeleting}
+          className="bg-red-600 hover:bg-red-700 text-sm"
+        >
+          {isDeleting ? "Deleting..." : "Delete Employee"}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+</div>
   );
 }

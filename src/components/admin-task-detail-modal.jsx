@@ -1,16 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminTaskMessages } from "@/components/admin-task-messages";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2, X, Calendar, Clock, Users, MessageSquare } from "lucide-react";
+import { Loader2, X, Calendar, Clock, Users } from "lucide-react";
 import axios from "axios";
 import Cookies from "js-cookie";
 import { api } from "@/context/StateProvider";
 import { useToast } from "@/hooks/use-toast";
 import { getSocket } from "@/services/admin-socket.service";
+import PropTypes from "prop-types";
 
 export function AdminTaskDetailModal({ isOpen, onClose, jobId, taskId }) {
   const [task, setTask] = useState(null);
@@ -19,7 +20,7 @@ export function AdminTaskDetailModal({ isOpen, onClose, jobId, taskId }) {
   const { toast } = useToast();
 
   // Fetch task details
-  const fetchTaskDetails = async () => {
+  const fetchTaskDetails = useCallback(async () => {
     if (!jobId || !taskId) return;
     
     try {
@@ -43,14 +44,52 @@ export function AdminTaskDetailModal({ isOpen, onClose, jobId, taskId }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [jobId, taskId, toast]);
+
+  // Fetch task messages with enhanced data
+  const fetchTaskMessages = useCallback(async () => {
+    if (!jobId || !taskId) return;
+    
+    try {
+      const response = await axios.get(`${api}/api/v1/jobs/${jobId}/tasks/${taskId}/messages`, {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${Cookies.get('admin_access_token')}`,
+        },
+      });
+      
+      if (response.data.success && response.data.messages) {
+        setTask((prevTask) => ({
+          ...prevTask,
+          messages: response.data.messages.map(msg => ({
+            _id: msg.id,
+            id: msg.id,
+            sender: msg.sender,
+            senderId: msg.senderId,
+            senderName: msg.senderName || (msg.sender === 'admin' ? 'Administrator' : 'Staff'),
+            type: msg.type || 'individual',
+            messageType: msg.messageType || 'text',
+            text: msg.text,
+            fileUrl: msg.fileUrl,
+            fileName: msg.fileName,
+            fileSize: msg.fileSize,
+            mimeType: msg.mimeType,
+            createdAt: msg.createdAt,
+          }))
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching task messages:", error);
+    }
+  }, [jobId, taskId]);
 
   // Load task details when modal opens
   useEffect(() => {
     if (isOpen && jobId && taskId) {
       fetchTaskDetails();
+      fetchTaskMessages();
     }
-  }, [isOpen, jobId, taskId]);
+  }, [isOpen, jobId, taskId, fetchTaskDetails, fetchTaskMessages]);
 
   // Listen for new-task-message events
   useEffect(() => {
@@ -60,35 +99,53 @@ export function AdminTaskDetailModal({ isOpen, onClose, jobId, taskId }) {
         if (data.taskId === taskId) {
           console.log("New task message received in modal:", data);
           setTask((prevTask) => {
+            if (!prevTask) return prevTask;
+            
             const newMessage = {
               id: data.message.id || data.message._id,
               sender: data.message.sender,
               senderId: data.message.senderId || data.message.staffId,
               senderName: data.message.senderName || (data.message.sender === 'staff' ? prevTask.resources?.employees[0]?.fullName : 'Administrator'),
+              type: data.message.type || 'individual',
+              messageType: data.message.messageType || 'text',
               text: data.message.text || data.message.responseText,
+              fileUrl: data.message.fileUrl,
+              fileName: data.message.fileName,
+              fileSize: data.message.fileSize,
+              mimeType: data.message.mimeType,
               createdAt: data.message.createdAt,
             };
+            
+            // Check if message already exists to prevent duplicates
+            const existingMessages = prevTask.messages || [];
+            const messageExists = existingMessages.some(msg => {
+              const existingId = msg.id || msg._id;
+              const newId = newMessage.id;
+              const isDuplicate = existingId === newId || 
+                (msg.text === newMessage.text && 
+                 msg.sender === newMessage.sender && 
+                 Math.abs(new Date(msg.createdAt) - new Date(newMessage.createdAt)) < 1000); // Within 1 second
+              return isDuplicate;
+            });
+            
+            if (messageExists) {
+              console.log("Message already exists, skipping duplicate:", newMessage.id);
+              return prevTask;
+            }
+            
+            console.log("Adding new message to state:", newMessage.id, "Total messages:", existingMessages.length + 1);
             return {
               ...prevTask,
-              [data.message.sender === 'admin' ? 'messages' : 'responses']: [
-                ...(data.message.sender === 'admin' ? prevTask.messages || [] : prevTask.responses || []),
-                data.message.sender === 'admin'
-                  ? newMessage
-                  : {
-                      _id: newMessage.id,
-                      staffId: newMessage.senderId,
-                      responseType: 'text',
-                      // senderId
-                      responseText: newMessage.text,
-                      createdAt: newMessage.createdAt,
-                    },
+              messages: [
+                ...existingMessages,
+                newMessage
               ],
             };
           });
           if (data.message.sender === 'staff') {
             toast({
               title: "New Response",
-              description: "You have received a new response from staff",
+              description: `You have received a new ${data.message.messageType || 'text'} response from staff`,
               variant: "info",
               className:
                 "bg-[#3B82F6] border-[#1E40AF] text-[#FFFFFF] border shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] rounded-md p-4",
@@ -97,46 +154,107 @@ export function AdminTaskDetailModal({ isOpen, onClose, jobId, taskId }) {
         }
       };
 
+      const handleMessageDeleted = (data) => {
+        if (data.taskId === taskId) {
+          console.log("Message deleted in modal:", data);
+          setTask((prevTask) => {
+            if (!prevTask) return prevTask;
+            return {
+              ...prevTask,
+              messages: (prevTask.messages || []).filter(msg => 
+                (msg.id || msg._id) !== data.messageId
+              ),
+              responses: (prevTask.responses || []).filter(res => 
+                (res._id || res.id) !== data.messageId
+              ),
+            };
+          });
+        }
+      };
+
       socket.on("new-task-message", handleNewTaskMessage);
-      return () => socket.off("new-task-message", handleNewTaskMessage);
+      socket.on("message-deleted", handleMessageDeleted);
+      return () => {
+        socket.off("new-task-message", handleNewTaskMessage);
+        socket.off("message-deleted", handleMessageDeleted);
+      };
     }
-  }, [isOpen, taskId]);
+  }, [isOpen, taskId, toast]);
 
   // Handle new message
   const handleNewMessage = (newMessage) => {
-    setTask((prevTask) => ({
-      ...prevTask,
-      messages: [
-        ...(prevTask.messages || []),
-        {
-          id: newMessage.id,
-          sender: newMessage.sender,
-          senderId: newMessage.senderId,
-          senderName: newMessage.senderName || 'Administrator',
-          text: newMessage.text,
-          createdAt: newMessage.createdAt,
-        },
-      ],
-    }));
+    setTask((prevTask) => {
+      if (!prevTask) return prevTask;
+      
+      const existingMessages = prevTask.messages || [];
+      const messageExists = existingMessages.some(msg => {
+        const existingId = msg.id || msg._id;
+        const newId = newMessage.id;
+        const isDuplicate = existingId === newId || 
+          (msg.text === newMessage.text && 
+           msg.sender === newMessage.sender && 
+           Math.abs(new Date(msg.createdAt) - new Date(newMessage.createdAt)) < 1000); // Within 1 second
+        return isDuplicate;
+      });
+      
+      if (messageExists) {
+        console.log("Message already exists in handleNewMessage, skipping duplicate:", newMessage.id);
+        return prevTask;
+      }
+      
+      console.log("Adding new message via handleNewMessage:", newMessage.id, "Total messages:", existingMessages.length + 1);
+      return {
+        ...prevTask,
+        messages: [
+          ...existingMessages,
+          {
+            id: newMessage.id,
+            sender: newMessage.sender,
+            senderId: newMessage.senderId,
+            senderName: newMessage.senderName || 'Administrator',
+            type: newMessage.type || 'individual',
+            messageType: newMessage.messageType || 'text',
+            text: newMessage.text,
+            fileUrl: newMessage.fileUrl,
+            fileName: newMessage.fileName,
+            fileSize: newMessage.fileSize,
+            mimeType: newMessage.mimeType,
+            createdAt: newMessage.createdAt,
+          },
+        ],
+      };
+    });
   };
 
   // Combine messages and responses for chat
   const combinedMessages = task
     ? [
         ...(task.messages || []).map((msg) => ({
-          id: msg._id,
+          id: msg._id || msg.id,
           sender: msg.sender,
           senderId: msg.senderId || msg.staffId,
           senderName: msg.senderName || 'Administrator',
+          type: msg.type || 'individual',
+          messageType: msg.messageType || 'text',
           text: msg.text,
+          fileUrl: msg.fileUrl,
+          fileName: msg.fileName,
+          fileSize: msg.fileSize,
+          mimeType: msg.mimeType,
           createdAt: new Date(msg.createdAt),
         })),
         ...(task.responses || []).map((res) => ({
-          id: res._id,
+          id: res._id || res.id,
           sender: 'staff',
           senderId: res.staffId || res.senderId,
           senderName: res.staffName || task.resources?.employees[0]?.fullName || 'Staff',
+          type: res.type || 'individual',
+          messageType: res.responseType || 'text',
           text: res.responseText,
+          fileUrl: res.fileUrl,
+          fileName: res.fileName,
+          fileSize: res.fileSize,
+          mimeType: res.mimeType,
           createdAt: new Date(res.createdAt),
         })),
       ].sort((a, b) => a.createdAt - b.createdAt)
@@ -284,12 +402,13 @@ export function AdminTaskDetailModal({ isOpen, onClose, jobId, taskId }) {
               </TabsContent>
 
               <TabsContent value="messages">
-                <div className="h-[400px]">
+                <div className="h-[500px]">
                   <AdminTaskMessages
                     jobId={jobId}
                     taskId={taskId}
                     messages={combinedMessages}
                     onNewMessage={handleNewMessage}
+                    fetchMessages={fetchTaskMessages}
                   />
                 </div>
               </TabsContent>
@@ -304,3 +423,10 @@ export function AdminTaskDetailModal({ isOpen, onClose, jobId, taskId }) {
     </Modal>
   );
 }
+
+AdminTaskDetailModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  jobId: PropTypes.string.isRequired,
+  taskId: PropTypes.string.isRequired,
+};

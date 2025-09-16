@@ -159,18 +159,19 @@ export const onAdminNotification = (callback) => {
     callback({
       id: `message-${data.message.id}`,
       title: "New Task Message",
-      message: data.message.text,
+      message: data.message.text || `New ${data.message.messageType} message`,
       type: "message",
       data: {
         jobId: data.jobId,
         taskId: data.taskId,
         url: `/admin/tasks/${data.taskId}`,
+        message: data.message,
       },
       timestamp: data.message.createdAt,
     });
     toast({
       title: "New Task Message",
-      description: data.message.text,
+      description: data.message.text || `New ${data.message.messageType} message`,
       variant: "default",
       className:
         "bg-[#3B82F6] border-[#1E40AF] text-[#FFFFFF] border shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] rounded-md p-4",
@@ -178,7 +179,7 @@ export const onAdminNotification = (callback) => {
 
     if (document.visibilityState !== "visible") {
       showPushNotification("New Task Message", {
-        body: data.message.text,
+        body: data.message.text || `New ${data.message.messageType} message`,
         icon: "/logo.png",
         badge: "/badge.png",
         data: {
@@ -192,12 +193,48 @@ export const onAdminNotification = (callback) => {
     }
   };
 
+  const handleMessageDeleted = (data) => {
+    console.log("Admin message deleted:", JSON.stringify(data, null, 2));
+    callback({
+      id: `deleted-${data.messageId}`,
+      title: "Message Deleted",
+      message: "A message was deleted",
+      type: "message-deleted",
+      data: {
+        jobId: data.jobId,
+        taskId: data.taskId,
+        messageId: data.messageId,
+      },
+    });
+  };
+
+  const handleUserTyping = (data) => {
+    console.log("Admin user typing:", JSON.stringify(data, null, 2));
+    callback({
+      id: `typing-${data.senderId}`,
+      title: "User Typing",
+      message: `${data.senderType} is typing...`,
+      type: "typing",
+      data: {
+        jobId: data.jobId,
+        taskId: data.taskId,
+        senderId: data.senderId,
+        senderType: data.senderType,
+        isTyping: data.isTyping,
+      },
+    });
+  };
+
   adminSocket.on("notification", handleNotification);
   adminSocket.on("new-task-message", handleNewTaskMessage);
+  adminSocket.on("message-deleted", handleMessageDeleted);
+  adminSocket.on("user-typing", handleUserTyping);
 
   return () => {
     adminSocket.off("notification", handleNotification);
     adminSocket.off("new-task-message", handleNewTaskMessage);
+    adminSocket.off("message-deleted", handleMessageDeleted);
+    adminSocket.off("user-typing", handleUserTyping);
   };
 };
 
@@ -325,4 +362,70 @@ export const testPushNotification = () => {
     tag: "test-" + Date.now(),
     requireInteraction: true,
   });
+};
+
+// Helper functions for admin chat features
+export const emitAdminTypingStart = (jobId, taskId) => {
+  const socket = getSocket();
+  if (socket) {
+    socket.emit('typing-start', {
+      jobId,
+      taskId,
+      senderId: 'admin',
+      senderType: 'admin'
+    });
+  }
+};
+
+export const emitAdminTypingStop = (jobId, taskId) => {
+  const socket = getSocket();
+  if (socket) {
+    socket.emit('typing-stop', {
+      jobId,
+      taskId,
+      senderId: 'admin',
+      senderType: 'admin'
+    });
+  }
+};
+
+export const emitAdminTaskMessage = (jobId, taskId, text, messageType = 'text', fileUrl = null, fileName = null, fileSize = null, mimeType = null) => {
+  const socket = getSocket();
+  if (socket) {
+    socket.emit('task-message', {
+      jobId,
+      taskId,
+      text,
+      senderType: 'admin',
+      senderId: 'admin',
+      messageType,
+      fileUrl,
+      fileName,
+      fileSize,
+      mimeType
+    });
+  }
+};
+
+export const deleteAdminMessage = async (jobId, taskId, messageId) => {
+  try {
+    const token = Cookies.get("admin_access_token");
+    if (!token) {
+      throw new Error("No access token found");
+    }
+
+    const response = await axios.delete(
+      `${apiUrl}/api/v1/jobs/${jobId}/tasks/${taskId}/messages/${messageId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error deleting message:", error);
+    throw error;
+  }
 };

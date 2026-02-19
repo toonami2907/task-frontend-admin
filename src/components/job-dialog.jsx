@@ -18,6 +18,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { api, useGlobalContext } from "@/context/StateProvider"
 
+const isActiveEmployee = (employee) =>
+  !employee?.isDeleted && String(employee?.status || "").toLowerCase() !== "deleted"
+
 // Define Zod schema for form validation with reminder, excluding endTime
 const jobSchema = z.object({
   jobTitle: z.string().min(1, "Job title is required"),
@@ -111,8 +114,9 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
           'Authorization': `Bearer ${Cookies.get('admin_access_token')}`
         }
       });
-      setAvailableEmployees(response.data.employees);
-      setEmployees(response.data.employees);
+      const activeEmployees = (response.data.employees || []).filter(isActiveEmployee)
+      setAvailableEmployees(activeEmployees);
+      setEmployees(activeEmployees);
     } catch (error) {
       console.error("Error fetching employees:", error);
       toast.error("Failed to fetch employees");
@@ -496,81 +500,100 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
   }
 
   return (
-    <div className="w-full hide-scrollbar">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold text-black">Add New Job</CardTitle>
-        <p className="text-md text-gray-900 font-medium">Job has multiple tasks assigned to teams or employees</p>
+    <div className="w-full hide-scrollbar rounded-xl border border-slate-200 bg-white">
+      <CardHeader className="border-b border-slate-200 bg-slate-50/80 px-6 py-5">
+        <CardTitle className="text-2xl font-bold text-slate-900">Create Job</CardTitle>
+        <p className="text-sm font-medium text-slate-600">
+          Build a job, assign tasks, resources, and reminder schedules.
+        </p>
       </CardHeader>
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6 px-6 py-6">
           {errors.general && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
               {errors.general}
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="title" className="text-md text-gray-900 font-semibold">Title</Label>
-            <Input 
-              id="title" 
-              placeholder="Job Name" 
-              value={jobTitle} 
-              onChange={(e) => {
-                setJobTitle(e.target.value)
-                setErrors(prev => ({ ...prev, jobTitle: undefined }))
-              }}
-              className={errors.jobTitle ? "border-red-500" : ""}
-            />
-            {errors.jobTitle && (
-              <p className="text-red-500 text-sm">{errors.jobTitle}</p>
-            )}
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="title" className="text-sm font-semibold text-slate-800">Job Title</Label>
+              <Input
+                id="title"
+                placeholder="Enter job title"
+                value={jobTitle}
+                onChange={(e) => {
+                  setJobTitle(e.target.value)
+                  setErrors(prev => ({ ...prev, jobTitle: undefined }))
+                }}
+                className={cn(
+                  "h-10 rounded-lg border-slate-300 bg-white focus-visible:ring-blue-500",
+                  errors.jobTitle && "border-red-500 focus-visible:ring-red-500"
+                )}
+              />
+              {errors.jobTitle && (
+                <p className="text-sm text-red-500">{errors.jobTitle}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="deadline" className="text-sm font-semibold text-slate-800">Job Deadline</Label>
+              <DateTimePicker
+                date={jobDeadline}
+                setDate={(date) => {
+                  setJobDeadline(date)
+                  setErrors(prev => ({ ...prev, jobDeadline: undefined }))
+                }}
+                placeholder="Pick date and time"
+              />
+              {errors.jobDeadline && (
+                <p className="text-sm text-red-500">{errors.jobDeadline}</p>
+              )}
+            </div>
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-md text-gray-900 font-semibold">Job Description</Label>
+            <Label htmlFor="description" className="text-sm font-semibold text-slate-800">Job Description</Label>
             <Textarea
               id="description"
-              placeholder="Start typing..."
+              placeholder="Describe job goal, scope, and expected outcome..."
               value={jobDescription}
               onChange={(e) => {
                 setJobDescription(e.target.value)
                 setErrors(prev => ({ ...prev, jobDescription: undefined }))
               }}
-              className={`min-h-[100px] ${errors.jobDescription ? "border-red-500" : ""}`}
+              className={cn(
+                "min-h-[110px] rounded-lg border-slate-300 bg-white focus-visible:ring-blue-500",
+                errors.jobDescription && "border-red-500 focus-visible:ring-red-500"
+              )}
             />
             {errors.jobDescription && (
-              <p className="text-red-500 text-sm">{errors.jobDescription}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="deadline" className="text-md text-gray-900 font-semibold">Job Deadline</Label>
-            <DateTimePicker 
-              date={jobDeadline} 
-              setDate={(date) => {
-                setJobDeadline(date)
-                setErrors(prev => ({ ...prev, jobDeadline: undefined }))
-              }} 
-              placeholder="Pick a date" 
-            />
-            {errors.jobDeadline && (
-              <p className="text-red-500 text-sm">{errors.jobDeadline}</p>
+              <p className="text-sm text-red-500">{errors.jobDescription}</p>
             )}
           </div>
 
           {tasks.length > 0 && (
             <div className="space-y-4">
               {tasks.map((task, index) => (
-                <div 
-                  key={task.id} 
-                  className={`rounded-md border ${hasTaskErrors(task.id) ? "border-red-300 bg-red-50" : "border-blue-100 bg-blue-50"} p-4`}
+                <div
+                  key={task.id}
+                  className={cn(
+                    "rounded-xl border bg-white p-4",
+                    hasTaskErrors(task.id)
+                      ? "border-red-300 bg-red-50/70"
+                      : "border-slate-200"
+                  )}
                 >
-                  <div className="mb-2 flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-blue-900">Tasks {index + 1}</h3>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-700">
+                      Task {index + 1}
+                    </h3>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       onClick={() => removeTask(task.id)}
-                      className="h-6 w-6 text-red-500"
+                      className="h-8 w-8 rounded-md text-red-500 hover:bg-red-100 hover:text-red-600"
                     >
                       <Trash2 className="h-4 w-4" />
                       <span className="sr-only">Remove task</span>
@@ -578,51 +601,57 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
                   </div>
 
                   {getTaskError(task.id, 'general') && (
-                    <div className="mb-3 text-sm text-red-600 bg-red-100 px-3 py-2 rounded-md">
+                    <div className="mb-3 rounded-md border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-600">
                       {getTaskError(task.id, 'general')}
                     </div>
                   )}
 
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div>
-                      <Label htmlFor={`task-title-${task.id}`}>Task</Label>
+                      <Label htmlFor={`task-title-${task.id}`} className="text-sm font-semibold text-slate-700">Task Name</Label>
                       <Input
                         id={`task-title-${task.id}`}
                         placeholder="Task Title"
                         value={task.title}
                         onChange={(e) => updateTask(task.id, "title", e.target.value)}
-                        className={`mt-1 ${getTaskError(task.id, 'title') ? "border-red-500" : ""}`}
+                        className={cn(
+                          "mt-1 h-10 rounded-lg border-slate-300 focus-visible:ring-blue-500",
+                          getTaskError(task.id, 'title') && "border-red-500 focus-visible:ring-red-500"
+                        )}
                       />
                       {getTaskError(task.id, 'title') && (
-                        <p className="text-red-500 text-sm">{getTaskError(task.id, 'title')}</p>
+                        <p className="text-sm text-red-500">{getTaskError(task.id, 'title')}</p>
                       )}
                     </div>
                     <div>
-                      <Label htmlFor={`task-description-${task.id}`}>Description</Label>
+                      <Label htmlFor={`task-description-${task.id}`} className="text-sm font-semibold text-slate-700">Description</Label>
                       <Textarea
                         id={`task-description-${task.id}`}
-                        placeholder="Task Desc"
+                        placeholder="Task instructions..."
                         value={task.description}
                         onChange={(e) => updateTask(task.id, "description", e.target.value)}
-                        className={`mt-1 min-h-[80px] ${getTaskError(task.id, 'description') ? "border-red-500" : ""}`}
+                        className={cn(
+                          "mt-1 min-h-[90px] rounded-lg border-slate-300 focus-visible:ring-blue-500",
+                          getTaskError(task.id, 'description') && "border-red-500 focus-visible:ring-red-500"
+                        )}
                       />
                       {getTaskError(task.id, 'description') && (
-                        <p className="text-red-500 text-sm">{getTaskError(task.id, 'description')}</p>
+                        <p className="text-sm text-red-500">{getTaskError(task.id, 'description')}</p>
                       )}
                     </div>
                     <div>
-                      <Label htmlFor={`task-deadline-${task.id}`}>Task Deadline</Label>
+                      <Label htmlFor={`task-deadline-${task.id}`} className="text-sm font-semibold text-slate-700">Task Deadline</Label>
                       <DateTimePicker
                         date={task.deadline}
                         setDate={(date) => updateTask(task.id, "deadline", date)}
-                        placeholder="Pick a date"
+                        placeholder="Pick date and time"
                       />
                       {getTaskError(task.id, 'deadline') && (
-                        <p className="text-red-500 text-sm">{getTaskError(task.id, 'deadline')}</p>
+                        <p className="text-sm text-red-500">{getTaskError(task.id, 'deadline')}</p>
                       )}
                     </div>
                     <div>
-                      <Label htmlFor={`task-resources-${task.id}`}>Assigned Resources</Label>
+                      <Label htmlFor={`task-resources-${task.id}`} className="text-sm font-semibold text-slate-700">Assigned Resources</Label>
                       <Popover
                         open={popoverOpenState[task.id]}
                         onOpenChange={(open) => {
@@ -641,7 +670,10 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
                           <Button
                             variant="outline"
                             role="combobox"
-                            className={`w-full justify-between mt-1 ${getTaskError(task.id, 'resources') ? "border-red-500" : ""}`}
+                            className={cn(
+                              "mt-1 h-10 w-full justify-between rounded-lg border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
+                              getTaskError(task.id, 'resources') && "border-red-500"
+                            )}
                             onClick={(e) => {
                               stopPropagation(e);
                               setPopoverOpenState({...popoverOpenState, [task.id]: !popoverOpenState[task.id]});
@@ -652,7 +684,7 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent
-                          className="w-full p-0"
+                          className="w-full rounded-lg border-slate-200 p-0"
                           onClick={stopPropagation}
                           onInteractOutside={(e) => {
                             const target = e.target;
@@ -667,7 +699,7 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
                               <CommandEmpty>No resources found.</CommandEmpty>
                               <CommandGroup heading="Teams">
                                 <div
-                                  className="flex items-center gap-2 p-2 cursor-pointer hover:bg-gray-100"
+                                  className="flex cursor-pointer items-center gap-2 p-2 text-sm text-slate-700 hover:bg-slate-100"
                                   onClick={(e) => handleSelectAll("teams", task.id, e)}
                                 >
                                   <Check
@@ -681,7 +713,7 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
                                 {teams.map((team) => (
                                   <div
                                     key={team.id}
-                                    className="flex items-center gap-2 p-2 cursor-pointer hover:bg-gray-100"
+                                    className="flex cursor-pointer items-center gap-2 p-2 text-sm text-slate-700 hover:bg-slate-100"
                                     onClick={(e) => toggleResourceSelection("teams", team.id, task.id, e)}
                                   >
                                     <Check
@@ -696,7 +728,7 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
                               </CommandGroup>
                               <CommandGroup heading="Employees">
                                 <div
-                                  className="flex items-center gap-2 p-2 cursor-pointer hover:bg-gray-100"
+                                  className="flex cursor-pointer items-center gap-2 p-2 text-sm text-slate-700 hover:bg-slate-100"
                                   onClick={(e) => handleSelectAll("employees", task.id, e)}
                                 >
                                   <Check
@@ -710,7 +742,7 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
                                 {employees.map((employee) => (
                                   <div
                                     key={employee.id}
-                                    className="flex items-center gap-2 p-2 cursor-pointer hover:bg-gray-100"
+                                    className="flex cursor-pointer items-center gap-2 p-2 text-sm text-slate-700 hover:bg-slate-100"
                                     onClick={(e) => toggleResourceSelection("employees", employee.id, task.id, e)}
                                   >
                                     <Check
@@ -729,11 +761,11 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
                       </Popover>
 
                       {getTaskError(task.id, 'resources') && (
-                        <p className="text-red-500 text-sm mt-1">{getTaskError(task.id, 'resources')}</p>
+                        <p className="mt-1 text-sm text-red-500">{getTaskError(task.id, 'resources')}</p>
                       )}
 
                       {(task.resources.teams.length > 0 || task.resources.employees.length > 0) && (
-                        <div className="mt-2 text-sm">
+                        <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
                           {task.resources.teams.length > 0 && (
                             <div className="mb-1">
                               <span className="font-medium">Teams:</span>{" "}
@@ -751,12 +783,12 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
                     </div>
 
                     <div>
-                      <Label htmlFor={`task-reminder-${task.id}`}>Reminders</Label>
-                      <Accordion type="single" collapsible className="mt-2 border rounded-md">
+                      <Label htmlFor={`task-reminder-${task.id}`} className="text-sm font-semibold text-slate-700">Reminders</Label>
+                      <Accordion type="single" collapsible className="mt-2 rounded-lg border border-slate-200">
                         <AccordionItem value="reminder">
-                          <AccordionTrigger className="px-4 py-2 text-sm">
+                          <AccordionTrigger className="px-4 py-2 text-sm font-medium text-slate-800 hover:no-underline">
                             <div className="flex items-center">
-                              <Bell className="mr-2 h-4 w-4" />
+                              <Bell className="mr-2 h-4 w-4 text-blue-600" />
                               <span>Reminder Settings</span>
                             </div>
                           </AccordionTrigger>
@@ -878,7 +910,7 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
                                     type="time"
                                     value={task.reminder?.startTime}
                                     onChange={(e) => updateTaskReminder(task.id, "startTime", e.target.value)}
-                                    className="w-full"
+                                    className="w-full rounded-lg border-slate-300 focus-visible:ring-blue-500"
                                   />
                                 </div>
                               </div>
@@ -920,29 +952,29 @@ export default function AddNewJobForm({ onCancel, onSubmit }) {
           )}
 
           {errors.tasks && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
               {errors.tasks}
             </div>
           )}
 
-          {tasks.length === 0 ? (
-            <Button type="button" variant="outline" onClick={addTask} className="mt-2 font-semibold text-black text-md">
-              Add Task
-            </Button>
-          ) : (
-            <Button type="button" variant="outline" onClick={addTask} className="mt-2 font-semibold text-black text-md">
-              Add More
-            </Button>
-          )}
+          <Button
+            type="button"
+            onClick={addTask}
+            className="h-10 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-600"
+          >
+            {tasks.length === 0 ? "Add Task" : "Add Another Task"}
+          </Button>
 
-          {tasks.length > 0 && <p className="text-sm text-muted-foreground">{tasks.length} Tasks Added</p>}
+          {tasks.length > 0 && (
+            <p className="text-sm font-medium text-slate-500">{tasks.length} task{tasks.length > 1 ? "s" : ""} added</p>
+          )}
         </CardContent>
-        <CardFooter className="flex justify-end gap-2 border-t p-4">
-          <Button type="button" variant="outline" onClick={handleCancel}>
+        <CardFooter className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <Button type="button" variant="outline" onClick={handleCancel} className="h-10 rounded-lg border-slate-300">
             Cancel
           </Button>
-          <Button type="submit" variant="default" className="bg-black text-white hover:bg-black/90">
-            Submit
+          <Button type="submit" variant="default" className="h-10 rounded-lg bg-blue-700 px-5 text-white hover:bg-blue-600">
+            Create Job
           </Button>
         </CardFooter>
       </form>

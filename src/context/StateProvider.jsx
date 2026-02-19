@@ -63,8 +63,22 @@ export default function StateProvider({ children }) {
 
     const fetchAllTeams = async () => {
       try {
+        const storedCompany = localStorage.getItem("selectedCompany");
+        if (!storedCompany) {
+          setTeams([]);
+          setTeamsCount(0);
+          return;
+        }
+        const parsedCompany = JSON.parse(storedCompany);
+        if (!parsedCompany?.id) {
+          setTeams([]);
+          setTeamsCount(0);
+          return;
+        }
+
         setLoading(true);
         const response = await axios.get(`${api}/api/v1/teams`,  {
+          params: { companyId: parsedCompany.id },
           withCredentials: true,
           headers: {
             'Content-Type': 'application/json',
@@ -105,7 +119,8 @@ export default function StateProvider({ children }) {
       // Send company data to backend
       const response = await axios.post(`${api}/api/v1/companies`, {
         name: newCompany.name,
-        nature: newCompany.nature || "Not specified"
+        nature: newCompany.nature || "Not specified",
+        natureOther: newCompany.nature === "Other" ? newCompany.natureOther : undefined
       },  {
         withCredentials: true,
         headers: {

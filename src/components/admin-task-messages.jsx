@@ -64,10 +64,16 @@ export function AdminTaskMessages({ jobId, taskId, messages, onNewMessage, fetch
           const unsubscribe = onAdminNotification((notification) => {
             if (notification.type === 'typing' && notification.data.taskId === taskId) {
               // Handle typing indicators
-              const { senderId, senderType, isTyping: userIsTyping } = notification.data;
+              const { senderId, senderType, senderName, isTyping: userIsTyping } = notification.data;
+              if (senderType === 'admin') {
+                return;
+              }
               setTypingUsers(prev => {
                 if (userIsTyping) {
-                  return [...prev.filter(u => u.id !== senderId), { id: senderId, name: senderType }];
+                  return [
+                    ...prev.filter((u) => u.id !== senderId),
+                    { id: senderId, name: senderName || 'Staff' }
+                  ];
                 } else {
                   return prev.filter(u => u.id !== senderId);
                 }
@@ -162,7 +168,7 @@ export function AdminTaskMessages({ jobId, taskId, messages, onNewMessage, fetch
 
       const token = Cookies.get("admin_access_token");
       const response = await axios.post(
-        `${apiUrl}/api/v1/jobs/${jobId}/tasks/${taskId}/upload-chat-file`,
+        `${apiUrl}/api/v1/jobs/${jobId}/tasks/${taskId}/upload`,
         formData,
         {
           headers: {
@@ -201,7 +207,7 @@ export function AdminTaskMessages({ jobId, taskId, messages, onNewMessage, fetch
 
       const token = Cookies.get("admin_access_token");
       const response = await axios.post(
-        `${apiUrl}/api/v1/jobs/${jobId}/tasks/${taskId}/upload-chat-file`,
+        `${apiUrl}/api/v1/jobs/${jobId}/tasks/${taskId}/upload`,
         formData,
         {
           headers: {
@@ -385,4 +391,5 @@ AdminTaskMessages.propTypes = {
   taskId: PropTypes.string.isRequired,
   messages: PropTypes.array.isRequired,
   onNewMessage: PropTypes.func,
+  fetchMessages: PropTypes.func,
 };

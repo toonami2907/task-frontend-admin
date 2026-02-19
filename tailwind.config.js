@@ -113,7 +113,7 @@ export default {
                     'sans-serif'
                 ],
                 raleway: [
-                    'Raleway',
+                    'Inter',
                     'sans-serif'
                 ],
                 satoshi: [

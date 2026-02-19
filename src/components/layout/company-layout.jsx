@@ -1,339 +1,335 @@
-/* eslint-disable no-unused-vars */
-import { Separator } from "@/components/ui/separator";
+import { useEffect, useMemo, useState } from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { useEffect, useState, useRef } from "react";
-import {
-  Link,
-  Navigate,
-  Outlet,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
+  Bell,
+  Briefcase,
+  ChevronsLeft,
+  ChevronsRight,
+  Menu,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  Users,
+  UsersRound,
+  X,
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useGlobalContext } from "@/context/StateProvider";
 import { checkAdminAuth } from "@/hooks/admin_auth_checker";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "../ui/badge";
-import { cn } from "@/lib/utils";
-import clsx from "clsx";
-import { Bell } from "lucide-react";
-import Breadcrumb from "../nav-breadcrumb";
-import axios from "axios";
-import toast, { Toaster } from "react-hot-toast";
-import Cookie from "js-cookie";
-import { api, useGlobalContext } from "@/context/StateProvider";
-import {
-  connectAdminSocket,
-  disconnectAdminSocket,
-  fetchAdminNotifications,
-} from "@/services/admin-socket.service";
+
+const getCompanyId = (company) => String(company?.id || company?._id || "");
+
+const navGroups = [
+  {
+    name: "Employees",
+    icon: Users,
+    path: "/companies/employees",
+  },
+  {
+    name: "Jobs List",
+    icon: Briefcase,
+    path: "/companies/jobs",
+  },
+  {
+    name: "Teams",
+    icon: UsersRound,
+    path: "/companies/teams",
+  },
+  {
+    name: "Permissions",
+    icon: ShieldCheck,
+    path: "/companies/roles",
+  },
+  {
+    name: "Settings",
+    icon: SlidersHorizontal,
+    path: "/companies/settings",
+  },
+];
+
+const isGroupActive = (groupPath, locationPathname) => locationPathname === groupPath;
 
 function CompanyLayout() {
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Set to true for demo, use actual auth in production
-  const [isValidCompany, setIsValidCompany] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedCompany, setSelectedCompany] = useState(null);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [unreadNotifications, setUnreadNotifications] = useState([]);
-  const [isLoadingNotifications, setIsLoadingNotifications] =
-    useState(false);
-  const location = useLocation();
   const navigate = useNavigate();
-  const { employeesCount, teamsCount, jobsCount } =
-    useGlobalContext();
-  const [activeTab, setActiveTab] = useState("overview");
-  const [adminId, setAdminId] = useState(null);
-  // Extract the current path to determine active tab
-  const path = location.pathname.split("/");
-  const scrollContainerRef = useRef(null);
-  // Validate company on mount
+  const location = useLocation();
+  const { companies } = useGlobalContext();
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCompany, setSelectedCompany] = useState(null);
+
+  const companyOptions = useMemo(
+    () =>
+      (companies || []).map((company) => ({
+        ...company,
+        id: getCompanyId(company),
+      })),
+    [companies]
+  );
+
   useEffect(() => {
-    const validateCompany = async () => {
+    let mounted = true;
+
+    const verifyAuth = async () => {
       try {
-        setIsLoading(true);
-
-        // Get selected company from localStorage
-        const storedCompany = localStorage.getItem("selectedCompany");
-
-        if (!storedCompany) {
-          toast.error("No company selected");
-          navigate("/companies");
+        const authState = await checkAdminAuth();
+        if (!mounted) {
           return;
         }
-
-        const { id } = JSON.parse(storedCompany);
-
-        if (!id) {
-          toast.error("Invalid company selection");
-          navigate("/companies");
-          return;
+        setIsAuthenticated(authState);
+        if (!authState) {
+          navigate("/login", { replace: true });
         }
-        const storedAdminId = localStorage.getItem("adminId");
-        if (storedAdminId) {
-          setAdminId(storedAdminId);
-          const socket = connectAdminSocket();
-          window.adminSocket = socket;
-          // fetchUnreadNotifications();
-        }
-
-        // Verify company exists in backend
-        const response = await axios.get(
-          `${api}/api/v1/companies/${id}`,
-          {
-            withCredentials: true,
-            headers: {
-              Authorization: `Bearer ${Cookie.get(
-                "admin_access_token"
-              )}`,
-            },
-          }
-        );
-
-        setSelectedCompany(response.data.company);
-        setIsValidCompany(true);
-      } catch (error) {
-        console.error("Error validating company:", error);
-
-        if (error.response && error.response.status === 404) {
-          toast.error("Company not found");
-        } else {
-          toast.error("Error validating company access");
-        }
-
-        // Redirect to companies page if validation fails
-        navigate("/admin/companies");
       } finally {
-        setIsLoading(false);
-        disconnectAdminSocket();
-        window.adminSocket = null;
+        if (mounted) {
+          setIsAuthLoading(false);
+        }
       }
     };
 
-    validateCompany();
+    verifyAuth();
+    return () => {
+      mounted = false;
+    };
   }, [navigate]);
 
-  const fetchUnreadNotifications = async () => {
+  useEffect(() => {
+    const storedCompany = localStorage.getItem("selectedCompany");
+    if (!storedCompany) {
+      navigate("/admin", { replace: true });
+      return;
+    }
+
     try {
-      setIsLoadingNotifications(true);
-      const data = await fetchAdminNotifications(1, 100, true);
-      setUnreadNotifications(data.notifications);
-      setUnreadCount(data.notifications.length);
-    } catch (error) {
-      console.error("Failed to fetch unread notifications:", error);
-    } finally {
-      setIsLoadingNotifications(false);
-    }
-  };
-  useEffect(() => {
-    if (
-      window.adminSocket &&
-      typeof window.adminSocket.addEventListener === "function"
-    ) {
-      const handleNewNotification = (notification) => {
-        setUnreadNotifications((prev) => [
-          notification,
-          ...prev.slice(0, 4),
-        ]);
-        setUnreadCount((prev) => prev + 1);
-      };
+      const parsed = JSON.parse(storedCompany);
+      const selected = companyOptions.find(
+        (company) => company.id === String(parsed?.id || "")
+      );
 
-      window.adminSocket.on("notification", handleNewNotification);
-
-      const interval = setInterval(fetchUnreadNotifications, 60000); // Refresh every minute
-
-      return () => {
-        window.adminSocket.off("notification", handleNewNotification);
-        clearInterval(interval);
-      };
-    }
-  }, []);
-  const companytabs = [
-    {
-      name: "Overview",
-      value: "overview",
-      count: null,
-      activeColor: "border-black",
-      path: "",
-    },
-    {
-      name: "Jobs",
-      value: "jobs",
-      count: jobsCount,
-      activeColor: "border-black",
-      path: "jobs",
-    },
-    {
-      name: "Employees",
-      value: "employees",
-      count: employeesCount,
-      activeColor: "border-blue-500",
-      badgeVariant: "blue",
-      path: "employees",
-    },
-    {
-      name: "Teams",
-      value: "teams",
-      count: teamsCount,
-      activeColor: "border-pink-500",
-      badgeVariant: "pink",
-      path: "teams",
-    },
-    {
-      name: "Settings",
-      value: "settings",
-      count: null,
-      activeColor: "border-gray-500",
-      path: "settings",
-    },
-    {
-      name: "Custom Messages",
-      value: "custom-messages",
-      count: null,
-      activeColor: "border-gray-500",
-      path: "custom-messages",
-    },
-  ];
-
-  // Scroll to active tab when tab changes
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      const activeTabElement =
-        scrollContainerRef.current.querySelector(
-          `[data-value="${activeTab}"]`
-        );
-      if (activeTabElement) {
-        // Calculate position to center the active tab
-        const container = scrollContainerRef.current;
-        const scrollLeft =
-          activeTabElement.offsetLeft -
-          container.clientWidth / 2 +
-          activeTabElement.clientWidth / 2;
-        container.scrollTo({ left: scrollLeft, behavior: "smooth" });
+      if (selected) {
+        setSelectedCompany({
+          id: selected.id,
+          name: selected.name,
+          nature: selected.nature,
+        });
+        return;
       }
-    }
-  }, [activeTab]);
 
-  // Show loading state
-  if (isLoading) {
+      if (parsed?.id) {
+        setSelectedCompany({
+          id: String(parsed.id),
+          name: parsed.name || "Selected Company",
+          nature: parsed.nature || "",
+        });
+      } else {
+        navigate("/admin", { replace: true });
+      }
+    } catch {
+      navigate("/admin", { replace: true });
+    }
+  }, [companyOptions, navigate]);
+
+  const handleSwitchCompany = (event) => {
+    const nextCompanyId = String(event.target.value);
+    const target = companyOptions.find((company) => company.id === nextCompanyId);
+    if (!target) {
+      return;
+    }
+
+    const payload = {
+      id: target.id,
+      name: target.name,
+      nature: target.nature,
+    };
+
+    localStorage.setItem("selectedCompany", JSON.stringify(payload));
+    setSelectedCompany(payload);
+    navigate("/companies/jobs");
+  };
+
+  const handleExitWorkspace = () => {
+    localStorage.removeItem("selectedCompany");
+    navigate("/admin");
+  };
+
+  const handleGroupClick = (group) => {
+    navigate(group.path);
+    setIsSidebarOpen(false);
+  };
+
+  if (isAuthLoading) {
     return (
-      <div className="flex flex-col min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        <p className="mt-4 text-gray-600">
-          Validating company access...
-        </p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-100">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-300 border-t-slate-900" />
       </div>
     );
   }
 
-  // Redirect if company is not valid (this is a fallback, the useEffect should handle redirection)
-  if (!isValidCompany && !isLoading) {
-    return <Navigate to="/admin/companies" />;
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Toaster position="top-center" />
-      {/* Header with Logo and User Icon */}
-      <header className="bg-white">
-        <div className="mx-auto px-7 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            {/* Logo */}
-            <Link to="/" className="flex items-center">
-              <div className="text-blue-500">
-                <img src="/logo.webp" alt="Logo" />
-              </div>
-            </Link>
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      <div
+        className={`fixed inset-0 z-40 bg-slate-900/40 md:hidden ${
+          isSidebarOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        } transition-opacity duration-200`}
+        onClick={() => setIsSidebarOpen(false)}
+        aria-hidden="true"
+      />
 
-            <div className="ml-4 hidden sm:block">
-              <Breadcrumb />
-            </div>
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-slate-800 bg-slate-900 text-slate-200 transition-all duration-200 ${
+          isSidebarCollapsed ? "md:w-20" : "md:w-72"
+        } ${
+          isSidebarOpen ? "w-72 translate-x-0" : "-translate-x-full md:translate-x-0"
+        }`}
+      >
+        <div
+          className={`flex h-20 border-b border-slate-800 ${
+            isSidebarCollapsed
+              ? "items-center justify-center gap-1 px-1 py-2"
+              : "items-center justify-between px-4 py-4"
+          }`}
+        >
+          <Link to="/companies/jobs" className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "gap-3"}`}>
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white">
+              <img src="/plain.svg" alt="Teamer" className="h-5 w-5 object-contain" />
+            </span>
+            {!isSidebarCollapsed && (
+              <span>
+                <span className="block text-xs uppercase tracking-[0.2em] text-slate-200">Teamer</span>
+              </span>
+            )}
+          </Link>
+
+          <div className={`flex items-center ${isSidebarCollapsed ? "gap-0" : "gap-1"}`}>
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed((previous) => !previous)}
+              className="hidden h-8 w-8 items-center justify-center rounded-lg border border-slate-700 text-slate-300 hover:border-blue-400 hover:text-blue-300 md:inline-flex"
+            >
+              {isSidebarCollapsed ? (
+                <ChevronsRight className="h-4 w-4" />
+              ) : (
+                <ChevronsLeft className="h-4 w-4" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 text-slate-300 hover:border-blue-400 hover:text-blue-300 md:hidden"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
+        </div>
 
-          {/* Company Name Display */}
-          {/* {selectedCompany && (
-            <div className="hidden md:flex items-center">
-              <span className="font-semibold text-gray-700">
-                {selectedCompany.name}
+        <div className="flex-1 space-y-3 overflow-y-auto px-3 py-5">
+          {navGroups.map((group) => {
+            const GroupIcon = group.icon;
+            const groupActive = isGroupActive(group.path, location.pathname) 
+
+            return (
+              <div key={group.name} className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => handleGroupClick(group)}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
+                    groupActive
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  } ${isSidebarCollapsed ? "justify-center px-2" : ""}`}
+                >
+                  <GroupIcon className="h-4 w-4" />
+                  {!isSidebarCollapsed && <span>{group.name}</span>}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="border-t border-slate-800 p-3">
+          {!isSidebarCollapsed ? (
+            <div className="rounded-lg border border-slate-700 bg-slate-800 p-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Company</p>
+              <p className="mt-1 truncate text-sm font-semibold text-white">{selectedCompany?.name || "Not selected"}</p>
+              <p className="truncate text-xs text-slate-400">{selectedCompany?.nature || ""}</p>
+              <button
+                type="button"
+                onClick={handleExitWorkspace}
+                className="mt-3 text-xs font-semibold text-blue-300 hover:text-blue-200"
+              >
+                Switch Company
+              </button>
+            </div>
+          ) : (
+            <div className="flex justify-center">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-800">
+                <img src="/plain-icon.svg" alt="Teamer" className="h-5 w-5 object-contain" />
               </span>
             </div>
-          )} */}
+          )}
+        </div>
+      </aside>
 
-          {/* User Profile and Notifications */}
-          <div className="flex items-center space-x-4">
-            <button className="text-gray-500 rounded-full border border-gray-200 h-9 w-9 flex items-center justify-center hover:bg-gray-100 ">
-              <Bell size={18} />
-            </button>
-            <div className="h-9 w-9 rounded-full bg-gray-300 overflow-hidden">
-              <img
-                src="/avatar.avif"
-                alt="User profile"
-                className="h-full w-full object-cover"
-              />
+      <div className={`transition-all duration-200 ${isSidebarCollapsed ? "md:pl-20" : "md:pl-72"}`}>
+        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white px-4 py-4 md:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(true)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 text-slate-700 md:hidden"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Management</p>
+                <h1 className="text-xl font-semibold text-slate-900">
+                  {selectedCompany?.name || "Workspace"}
+                </h1>
+              </div>
+            </div>
+
+            <div className="flex w-full items-center gap-2 md:w-auto">
+              <div className="relative hidden md:block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search tasks, employees, teams"
+                  className="h-10 w-72 rounded-lg border-slate-300 pl-9"
+                />
+              </div>
+
+              <select
+                className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+                value={selectedCompany?.id || ""}
+                onChange={handleSwitchCompany}
+              >
+                {companyOptions.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+
+              <Button variant="outline" className="h-10 w-10 rounded-lg border-slate-300 p-0">
+                <Bell className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Navigation Tabs - Now with horizontal scroll */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="px-6 relative">
-          {/* Scrollable container - No bottom padding here */}
-          <div
-            ref={scrollContainerRef}
-            className="flex overflow-x-auto scrollbar-hide"
-            style={{
-              scrollbarWidth: "none" /* Firefox */,
-              msOverflowStyle: "none" /* IE and Edge */,
-              WebkitOverflowScrolling:
-                "touch" /* Smooth scrolling on iOS */,
-            }}
-          >
-            {companytabs.map((tab) => (
-              <Link
-                key={tab.name}
-                to={`/companies/${tab.path}`}
-                data-value={tab.value}
-                onClick={() => setActiveTab(tab.value)}
-                className={clsx(
-                  "relative whitespace-nowrap py-3 px-3 mr-3 flex-shrink-0 text-sm md:text-md font-semibold transition-colors duration-200",
-                  activeTab === tab.value
-                    ? `text-black border-b-[3px] border-black`
-                    : "text-gray-700 hover:text-gray-800"
-                )}
-              >
-                {tab.name}
-                {tab.count !== null && (
-                  <span
-                    className={clsx(
-                      "ml-2 inline-flex items-center justify-center w-5 h-5 rounded-sm text-xs font-semibold",
-                      tab.value === "employees"
-                        ? "bg-blue-100 text-blue-600"
-                        : tab.value === "teams"
-                        ? "bg-pink-100 text-pink-600"
-                        : "bg-green-100 text-gray-600"
-                    )}
-                  >
-                    {tab.count}
-                  </span>
-                )}
-              </Link>
-            ))}
-          </div>
-
-          {/* Optional: Fade indicators for scroll */}
-          <div className="hidden sm:block absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none"></div>
-          <div className="hidden sm:block absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
-        </div>
-      </nav>
-
-      {/* Main Content Area with Outlet */}
-      <main className="flex-grow bg-gray-50">
-        <div className="px-8 py-6">
-          <Outlet context={{ company: selectedCompany }} />
-        </div>
-      </main>
+        <main className="px-4 py-6 md:px-8">
+          <Outlet context={{ selectedCompany, searchQuery }} />
+        </main>
+      </div>
     </div>
   );
 }

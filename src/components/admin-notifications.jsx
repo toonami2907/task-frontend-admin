@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   fetchAdminNotifications, 
-  markAdminNotificationAsRead, 
-  markAllAdminNotificationsAsRead 
+  markNotificationAsRead, 
+  markAllNotificationsAsRead 
 } from "@/services/admin-socket.service";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
@@ -22,7 +22,9 @@ export function AdminNotifications() {
   const loadNotifications = async (pageNum = 1, append = false) => {
     try {
       setIsLoading(true);
-      const data = await fetchAdminNotifications(pageNum);
+      const storedCompany = localStorage.getItem("selectedCompany");
+      const companyId = storedCompany ? JSON.parse(storedCompany).id : null;
+      const data = await fetchAdminNotifications(pageNum, 20, false, companyId);
       
       if (append) {
         setNotifications(prev => [...prev, ...data.notifications]);
@@ -48,6 +50,12 @@ export function AdminNotifications() {
     
     // Set up socket listener for new notifications
     const handleNewNotification = (data) => {
+      const storedCompany = localStorage.getItem("selectedCompany");
+      const companyId = storedCompany ? JSON.parse(storedCompany).id : null;
+      const notificationCompanyId = data?.data?.companyId;
+      if (companyId && notificationCompanyId && notificationCompanyId !== companyId) {
+        return;
+      }
       setNotifications(prev => [data, ...prev]);
     };
     
@@ -74,7 +82,7 @@ export function AdminNotifications() {
 
   const handleMarkAsRead = async (id) => {
     try {
-      await markAdminNotificationAsRead(id);
+      await markNotificationAsRead(id);
       setNotifications(prev =>
         prev.map(notification => 
           notification.id === id ? { ...notification, read: true } : notification
@@ -92,7 +100,7 @@ export function AdminNotifications() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      await markAllAdminNotificationsAsRead();
+      await markAllNotificationsAsRead();
       setNotifications(prev => 
         prev.map(notification => ({ ...notification, read: true }))
       );

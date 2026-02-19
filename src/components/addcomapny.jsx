@@ -15,18 +15,42 @@ import clsx from 'clsx';
 import toast from 'react-hot-toast';
 import { useGlobalContext } from '@/context/StateProvider';
 
+const COMPANY_NATURES = [
+  "Tech",
+  "Retail",
+  "Healthcare",
+  "Finance",
+  "Education",
+  "Hospitality",
+  "Logistics",
+  "Construction",
+  "Government",
+  "Non-profit",
+  "Other"
+];
+
 // Define Zod schema for validation
 const companySchema = z.object({
   name: z.string().min(1, "Company name is required").max(100, "Company name must be 100 characters or less"),
   nature: z.string().min(1, "Company nature is required").max(100, "Company nature must be 100 characters or less"),
+  natureOther: z.string().optional()
+}).refine((data) => {
+  if (data.nature === "Other") {
+    return !!data.natureOther && data.natureOther.trim().length > 0;
+  }
+  return true;
+}, {
+  message: "Please specify company nature",
+  path: ["natureOther"]
 });
 
 const AddCompanyDialog = ({ open, onOpenChange }) => {
   const [formData, setFormData] = useState({
     name: '',
-    nature: ''
+    nature: '',
+    natureOther: ''
   });
-  const [errors, setErrors] = useState({ name: '', nature: '' });
+  const [errors, setErrors] = useState({ name: '', nature: '', natureOther: '' });
   const { addCompany } = useGlobalContext();
 
   const handleChange = (e) => {
@@ -51,6 +75,7 @@ const AddCompanyDialog = ({ open, onOpenChange }) => {
       setErrors({
         name: fieldErrors.name ? fieldErrors.name[0] : '',
         nature: fieldErrors.nature ? fieldErrors.nature[0] : '',
+        natureOther: fieldErrors.natureOther ? fieldErrors.natureOther[0] : '',
       });
       return;
     }
@@ -65,8 +90,8 @@ const AddCompanyDialog = ({ open, onOpenChange }) => {
 
       // Update success toast and reset form
       toast.success("Company created successfully!", { id: toastId });
-      setFormData({ name: '', nature: '' });
-      setErrors({ name: '', nature: '' });
+      setFormData({ name: '', nature: '', natureOther: '' });
+      setErrors({ name: '', nature: '', natureOther: '' });
       onOpenChange(false);
     } catch (error) {
       toast.error("Failed to save company. Please try again.", { id: toast.loading("Saving company...") });
@@ -100,19 +125,40 @@ const AddCompanyDialog = ({ open, onOpenChange }) => {
           </div>
           <div className="space-y-2">
             <Label htmlFor="nature" className="text-base text-black font-semibold">Nature</Label>
-            <Input
+            <select
               id="nature"
               name="nature"
-              placeholder="Company Nature"
               value={formData.nature}
               onChange={handleChange}
               className={clsx(
-                "w-full focus-visible:border-black font-medium h-10 focus-visible:ring-0 focus-visible:border shadow-none placeholder:text-md placeholder:font-medium",
+                "w-full h-10 rounded-md border border-gray-200 bg-white px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black",
                 errors.nature && "border-red-500"
               )}
-            />
+            >
+              <option value="">Select company nature</option>
+              {COMPANY_NATURES.map((nature) => (
+                <option key={nature} value={nature}>{nature}</option>
+              ))}
+            </select>
             {errors.nature && <p className="text-red-500 text-sm mt-1">{errors.nature}</p>}
           </div>
+          {formData.nature === "Other" && (
+            <div className="space-y-2">
+              <Label htmlFor="natureOther" className="text-base text-black font-semibold">Specify Nature</Label>
+              <Input
+                id="natureOther"
+                name="natureOther"
+                placeholder="Type company nature"
+                value={formData.natureOther}
+                onChange={handleChange}
+                className={clsx(
+                  "w-full focus-visible:border-black font-medium h-10 focus-visible:ring-0 focus-visible:border shadow-none placeholder:text-md placeholder:font-medium",
+                  errors.natureOther && "border-red-500"
+                )}
+              />
+              {errors.natureOther && <p className="text-red-500 text-sm mt-1">{errors.natureOther}</p>}
+            </div>
+          )}
           <DialogFooter className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel

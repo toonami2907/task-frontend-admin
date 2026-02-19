@@ -1,54 +1,97 @@
-import CompanyDialogDemo from '@/components/company-dialog';
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useGlobalContext } from '@/context/StateProvider';
+import CompanyDialogDemo from "@/components/company-dialog";
+import { Building2, ChevronRight, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { useGlobalContext } from "@/context/StateProvider";
+
+const getCompanyId = (company) => company?.id || company?._id;
 
 const Company = () => {
   const { companies } = useGlobalContext();
   const navigate = useNavigate();
+  const [query, setQuery] = useState("");
 
-  // Handle company card click to navigate to company-specific route and save to localStorage
+  const filteredCompanies = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) {
+      return companies;
+    }
+
+    return companies.filter((company) =>
+      company?.name?.toLowerCase().includes(normalized)
+    );
+  }, [companies, query]);
+
   const handleCompanyClick = (company) => {
-    // Replace spaces with hyphens and encode the company name for the URL
-    const encodedName = company.name.toLowerCase().replace(/\s+/g, '-');
-    
-    // Save both company name and ID to localStorage
-    localStorage.setItem('selectedCompany', JSON.stringify({ 
-      name: company.name,
-      id: company.id // Store the company ID
-    }));
-    
-    navigate(`/companies/${encodedName}`);
+    localStorage.setItem(
+      "selectedCompany",
+      JSON.stringify({
+        id: getCompanyId(company),
+        name: company.name,
+        nature: company.nature,
+      })
+    );
+
+    navigate("/admin");
   };
 
   return (
-    <div className="flex flex-col gap-6 p-4">
-      <div className="flex w-full justify-between items-center">
-        <h1 className="text-3xl font-bold">Companies</h1>
+    <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_20px_50px_-32px_rgba(15,23,42,0.55)] sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Company Access
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-slate-950">Companies</h1>
+        </div>
         <CompanyDialogDemo />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {companies.length === 0 ? (
-          <p className="text-gray-500">No companies found.</p>
-        ) : (
-          companies.map((company) => (
-            <div
-              key={company.id}
-              onClick={() => handleCompanyClick(company)}
-              className="flex items-center gap-3 p-3 h-20 bg-white rounded-lg shadow-xs border border-gray-200 hover:border-gray-300 cursor-pointer"
-            >
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-700 text-white font-medium">
-                {company.name.charAt(0).toLowerCase()}
-              </div>
-              <div className="flex flex-col">
-                <span className="text-md font-semibold text-black">{company.name}</span>
-                <span className="text-xs text-gray-700">{company.nature}</span>
-              </div>
-            </div>
-          ))
-        )}
+
+      <div className="relative max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search company"
+          className="h-10 rounded-xl border-slate-300 pl-9"
+        />
       </div>
-    </div>
+
+      {filteredCompanies.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
+          <Building2 className="mx-auto mb-3 h-8 w-8 text-slate-500" />
+          <p className="text-base font-semibold text-slate-900">No company found</p>
+          <p className="mt-1 text-sm text-slate-600">
+            Create a company, then select it to enter the admin panel.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+          {filteredCompanies.map((company) => (
+            <button
+              key={getCompanyId(company)}
+              type="button"
+              onClick={() => handleCompanyClick(company)}
+              className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition-all duration-200 hover:border-cyan-500 hover:shadow-[0_14px_32px_-24px_rgba(6,182,212,0.7)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+            >
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white">
+                {company.name?.charAt(0)?.toUpperCase()}
+              </span>
+              <span className="flex-1">
+                <span className="block truncate text-sm font-semibold text-slate-900">
+                  {company.name}
+                </span>
+                <span className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                  {company.nature || "Company"}
+                </span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-slate-400 transition-colors group-hover:text-cyan-600" />
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
   );
 };
 

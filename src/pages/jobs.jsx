@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import AddNewJobForm from "@/components/job-dialog";
@@ -8,7 +8,7 @@ import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import Cookies from "js-cookie";
 import { format } from "date-fns";
-import { MoreHorizontal, Trash2, Bell, X, MessageSquare } from "lucide-react";
+import { MoreHorizontal, Trash2, Bell, X, MessageSquare, Paperclip, Upload, Download, FileText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,6 +83,12 @@ const formatReminderInfo = (task) => {
   return `${frequencyText} at ${task.reminder.startTime} via ${channelsText.join(", ")}`;
 };
 
+const formatFileSize = (size = 0) => {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 const Job = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -102,6 +108,11 @@ const Job = () => {
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [selectedJobId, setSelectedJobId] = useState(null);
+  const [resourceLabel, setResourceLabel] = useState("");
+  const [resourceFile, setResourceFile] = useState(null);
+  const [isUploadingResource, setIsUploadingResource] = useState(false);
+  const [deletingResourceId, setDeletingResourceId] = useState(null);
+  const fileInputRef = useRef(null);
 
   // Function to handle opening the task detail modal
   const handleOpenTaskDetail = (jobId, taskId, e) => {
@@ -109,6 +120,16 @@ const Job = () => {
     setSelectedJobId(jobId);
     setSelectedTaskId(taskId);
     setShowTaskDetailModal(true);
+  };
+
+  const openJobPanel = (job) => {
+    setSelectedJob(job);
+    setShowTasksModal(true);
+    setResourceLabel("");
+    setResourceFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   // Update current time every second
@@ -286,23 +307,15 @@ const Job = () => {
         },
       });
 
+      setJobs((prevJobs) => prevJobs.filter((job) => job.id !== jobToDelete.id));
+      setJobsCount((prev) => Math.max(0, (prev || 0) - 1));
       setShowDeleteDialog(false);
-      setTimeout(() => {
-        setJobs((prevJobs) => prevJobs.filter((job) => job.id !== jobToDelete.id));
-        setJobsCount((prev) => prev - 1);
-        setJobToDelete(null);
-        toast({
-          title: "Success",
-          description: "Job deleted successfully",
-          variant: "success",
-          className:
-            "bg-[#10B981] border-[#065F46] text-[#FFFFFF] border shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] rounded-md p-4",
-        });
-        window.location.reload()
-        if (selectedCompany) {
-          fetchJobs(selectedCompany.id);
-        }
-      }, 100);
+      setJobToDelete(null);
+      toast({
+        title: "Success",
+        description: "Job deleted successfully",
+        variant: "success",
+      });
     } catch (error) {
       console.error("Error deleting job:", error);
       toast({
@@ -318,18 +331,153 @@ const Job = () => {
     }
   };
 
+  const handleResourceUpload = async (event) => {
+    event.preventDefault();
+
+    if (!selectedJob?.id || !resourceFile) {
+      toast({
+        title: "Missing file",
+        description: "Select a file to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsUploadingResource(true);
+      const formData = new FormData();
+      formData.append("file", resourceFile);
+      if (resourceLabel.trim()) {
+        formData.append("label", resourceLabel.trim());
+      }
+
+      const response = await axios.post(
+        `${api}/api/v1/jobs/${selectedJob.id}/resources`,
+        formData,
+        {
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${Cookies.get("admin_access_token")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      const uploadedResource = response.data.resource;
+      setJobs((prevJobs) =>
+        prevJobs.map((job) => {
+          if (job.id !== selectedJob.id) return job;
+          const nextResources = [uploadedResource, ...(job.resources || [])];
+          return {
+            ...job,
+            resources: nextResources,
+            resourcesCount: nextResources.length,
+          };
+        })
+      );
+
+      setSelectedJob((prev) => {
+        if (!prev) return prev;
+        const nextResources = [uploadedResource, ...(prev.resources || [])];
+        return {
+          ...prev,
+          resources: nextResources,
+          resourcesCount: nextResources.length,
+        };
+      });
+
+      setResourceLabel("");
+      setResourceFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      toast({
+        title: "Success",
+        description: "Resource uploaded",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to upload resource",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingResource(false);
+    }
+  };
+
+  const handleDeleteResource = async (resourceId, event) => {
+    event.stopPropagation();
+    if (!selectedJob?.id || !resourceId) return;
+
+    try {
+      setDeletingResourceId(resourceId);
+      await axios.delete(`${api}/api/v1/jobs/${selectedJob.id}/resources/${resourceId}`, {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${Cookies.get("admin_access_token")}`,
+        },
+      });
+
+      setJobs((prevJobs) =>
+        prevJobs.map((job) => {
+          if (job.id !== selectedJob.id) return job;
+          const nextResources = (job.resources || []).filter(
+            (resource) => String(resource.id || resource._id) !== String(resourceId)
+          );
+          return {
+            ...job,
+            resources: nextResources,
+            resourcesCount: nextResources.length,
+          };
+        })
+      );
+
+      setSelectedJob((prev) => {
+        if (!prev) return prev;
+        const nextResources = (prev.resources || []).filter(
+          (resource) => String(resource.id || resource._id) !== String(resourceId)
+        );
+        return {
+          ...prev,
+          resources: nextResources,
+          resourcesCount: nextResources.length,
+        };
+      });
+
+      toast({
+        title: "Success",
+        description: "Resource removed",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to delete resource",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingResourceId(null);
+    }
+  };
+
   // Filter jobs based on search term
   const filteredJobs = jobs.filter((job) =>
-    job.jobTitle.toLowerCase().includes(searchTerm.toLowerCase())
+    `${job.jobTitle || ""} ${job.jobDescription || ""}`
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
   );
+  const selectedJobResources = selectedJob?.resources || [];
 
   return (
- <main className="max-w-screen-xl mx-auto bg-neutral-100 overflow-y-auto dark:bg-[#131313] hide-scrollbar p-4 sm:p-6 lg:p-8 max-h-[800px] h-[600px]">
-      <div className="flex flex-col gap-4 sm:gap-6 ">
+ <main className="mx-auto max-w-[1400px] overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col gap-4 sm:gap-6">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row w-full justify-between items-start sm:items-center gap-4 sm:gap-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Jobs Summary
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">
+            Jobs
           </h1>
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <Input
@@ -337,11 +485,11 @@ const Job = () => {
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:w-48 lg:w-64 h-9 sm:h-10 text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 border-gray-300 dark:border-gray-600 rounded-md focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm text-sm sm:text-base"
+              className="w-full sm:w-56 lg:w-72 h-10 border-slate-300 rounded-md text-sm"
             />
             <ModalTrigger onClick={() => setIsModalOpen(true)}>
-              <Button className="bg-[#3B82F6] text-white hover:bg-[#1E40AF] rounded-md px-3 py-1 sm:px-4 sm:py-2 text-sm sm:text-base w-full sm:w-auto">
-                Add New Job
+              <Button className="h-10 bg-blue-700 text-white hover:bg-blue-600 rounded-md px-4 text-sm w-full sm:w-auto">
+                Create Job
               </Button>
             </ModalTrigger>
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-4xl hide-scrollbar">
@@ -356,16 +504,17 @@ const Job = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#3B82F6]"></div>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto hide-scrollbar max-h-[400px] h-full">
+          <div className="flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white">
             {/* Table for larger screens */}
-            <table className="hidden sm:table w-full border-collapse rounded-lg overflow-hidden">
+            <table className="hidden sm:table w-full border-collapse">
               <thead>
-                <tr className="bg-gray-50 dark:bg-gray-800 border text-gray-700 dark:text-gray-300 text-xs sm:text-sm font-semibold">
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 text-xs uppercase tracking-wide font-semibold">
                   <th className="p-2 sm:p-3 text-left">Job</th>
                   <th className="p-2 sm:p-3 text-left">Status</th>
                   <th className="p-2 sm:p-3 text-left">Deadline</th>
                   <th className="p-2 sm:p-3 text-left">Remaining Time</th>
                   <th className="p-2 sm:p-3 text-left">Task Completed</th>
+                  <th className="p-2 sm:p-3 text-left">Resources</th>
                   <th className="p-2 sm:p-3 text-left">Messages</th>
                   <th className="p-2 sm:p-3 text-center">Actions</th>
                 </tr>
@@ -374,8 +523,8 @@ const Job = () => {
                 {filteredJobs.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="7"
-                      className="p-4 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 border-b text-sm"
+                      colSpan="8"
+                      className="p-6 text-center text-slate-500 bg-white border-b text-sm"
                     >
                       No jobs found.
                     </td>
@@ -388,54 +537,66 @@ const Job = () => {
                     return (
                       <tr
                         key={job.id}
-                        className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 border-b last:border-b-0 transition-colors cursor-pointer"
-                        onClick={() => {
-                          setSelectedJob(job);
-                          setShowTasksModal(true);
-                        }}
+                        className="bg-white hover:bg-slate-50 border-b border-slate-100 last:border-b-0 transition-colors cursor-pointer"
+                        onClick={() => openJobPanel(job)}
                       >
-                        <td className="p-2 sm:p-3 text-gray-900 dark:text-gray-100 font-semibold text-sm">
+                        <td className="p-2 sm:p-3 text-slate-900 font-semibold text-sm">
                           {job.jobTitle}
                         </td>
                         <td className="p-2 sm:p-3">
                           <span
                             className={cn(
                               'px-2 py-1 rounded-full text-xs font-medium',
-                              job.status === "in progress"
-                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                              job.status === "in progress" || job.status === "in-progress"
+                                ? "bg-blue-100 text-blue-700"
                                 : job.status === "completed"
-                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                ? "bg-green-100 text-green-700"
                                 : job.status === "blocked"
-                                ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                                ? "bg-red-100 text-red-700"
                                 : job.status === "pending"
-                                ? "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300"
-                                : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-slate-100 text-slate-700"
                             )}
                           >
                             {job.status}
                           </span>
                         </td>
-                        <td className="p-2 sm:p-3 text-gray-900 dark:text-gray-100 font-semibold text-sm">
+                        <td className="p-2 sm:p-3 text-slate-900 font-semibold text-sm">
                           {job.jobDeadline ? format(new Date(job.jobDeadline), "EEE, MMM dd, yyyy") : "No deadline"}
                         </td>
-                        <td className="p-2 sm:p-3 text-gray-950 dark:text-gray-100 font-bold text-sm">
+                        <td className="p-2 sm:p-3 text-slate-900 font-semibold text-sm">
                           {remainingTime}
                         </td>
-                        <td className="p-2 sm:p-3 text-gray-900 dark:text-gray-100 font-medium text-sm">
+                        <td className="p-2 sm:p-3 text-slate-900 font-medium text-sm">
                           {job.tasksCompleted || 0}/{job.tasksCount || 0}
                         </td>
-                        <td className="p-2 sm:p-3 text-gray-600 dark:text-gray-300 text-sm">
+                        <td className="p-2 sm:p-3 text-slate-700 text-sm">
+                          <span className="inline-flex items-center gap-1">
+                            <Paperclip className="h-4 w-4 text-slate-500" />
+                            {job.resourcesCount ?? job.resources?.length ?? 0}
+                          </span>
+                        </td>
+                        <td className="p-2 sm:p-3 text-slate-600 text-sm">
                           {job.latestMessage || "No messages"}
                         </td>
                         <td className="p-2 sm:p-3 text-center">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
+                              <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                                 <span className="sr-only">Open menu</span>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openJobPanel(job);
+                                }}
+                              >
+                                Open Job Panel
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-red-600 cursor-pointer flex items-center"
                                 onClick={(e) => {
@@ -460,7 +621,7 @@ const Job = () => {
             {/* Card layout for mobile screens */}
             <div className="sm:hidden flex flex-col gap-4">
               {filteredJobs.length === 0 ? (
-                <div className="p-4 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 rounded-lg shadow-sm">
+                <div className="p-4 text-center text-slate-500 bg-white rounded-lg border border-slate-200">
                   No jobs found.
                 </div>
               ) : (
@@ -471,14 +632,11 @@ const Job = () => {
                   return (
                     <div
                       key={job.id}
-                      className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                      onClick={() => {
-                        setSelectedJob(job);
-                        setShowTasksModal(true);
-                      }}
+                      className="bg-white rounded-lg p-4 border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors"
+                      onClick={() => openJobPanel(job)}
                     >
                       <div className="flex justify-between items-start mb-2">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
+                        <h3 className="text-sm font-semibold text-slate-900 line-clamp-1">
                           {job.jobTitle}
                         </h3>
                         <DropdownMenu>
@@ -505,45 +663,52 @@ const Job = () => {
                       </div>
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Status:</span>
+                          <span className="text-slate-500">Status:</span>
                           <span
                             className={cn(
                               'px-2 py-1 rounded-full text-xs font-medium',
-                              job.status === "in progress"
-                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                              job.status === "in progress" || job.status === "in-progress"
+                                ? "bg-blue-100 text-blue-700"
                                 : job.status === "completed"
-                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                ? "bg-green-100 text-green-700"
                                 : job.status === "blocked"
-                                ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                                ? "bg-red-100 text-red-700"
                                 : job.status === "pending"
-                                ? "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300"
-                                : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-slate-100 text-slate-700"
                             )}
                           >
                             {job.status}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Deadline:</span>
-                          <span className="text-gray-900 dark:text-gray-100 font-semibold">
+                          <span className="text-slate-500">Deadline:</span>
+                          <span className="text-slate-900 font-semibold">
                             {job.jobDeadline ? format(new Date(job.jobDeadline), "EEE, MMM dd, yyyy") : "No deadline"}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Remaining Time:</span>
-                          <span className="text-gray-950 dark:text-gray-100 font-bold">
+                          <span className="text-slate-500">Remaining Time:</span>
+                          <span className="text-slate-900 font-semibold">
                             {remainingTime}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Tasks Completed:</span>
-                          <span className="text-gray-900 dark:text-gray-100">
+                          <span className="text-slate-500">Tasks Completed:</span>
+                          <span className="text-slate-900">
                             {job.tasksCompleted || 0}/{job.tasksCount || 0}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Messages:</span>
-                          <span className="text-gray-600 dark:text-gray-300">
+                          <span className="text-slate-500">Resources:</span>
+                          <span className="inline-flex items-center gap-1 text-slate-700">
+                            <Paperclip className="h-4 w-4 text-slate-500" />
+                            {job.resourcesCount ?? job.resources?.length ?? 0}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Messages:</span>
+                          <span className="text-slate-600">
                             {job.latestMessage || "No messages"}
                           </span>
                         </div>
@@ -556,21 +721,6 @@ const Job = () => {
           </div>
         )}
 
-        {/* Pagination Section */}
-        <div className="flex justify-end gap-2 my-4">
-          <Button
-            variant="outline"
-            className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-3 py-1 sm:px-4 sm:py-2 text-sm"
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-3 py-1 sm:px-4 sm:py-2 text-sm"
-          >
-            Next
-          </Button>
-        </div>
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -581,12 +731,12 @@ const Job = () => {
           if (!open) setJobToDelete(null);
         }}
       >
-        <AlertDialogContent className="bg-white dark:bg-gray-900 w-[90%] sm:w-full max-w-md rounded-lg">
+        <AlertDialogContent className="bg-white w-[90%] sm:w-full max-w-md rounded-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900 dark:text-gray-100 text-lg sm:text-xl">
+            <AlertDialogTitle className="text-slate-900 text-lg sm:text-xl">
               Are you sure you want to delete this job?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
+            <AlertDialogDescription className="text-slate-600 text-sm sm:text-base">
               This action cannot be undone. This will permanently delete the job
               "{jobToDelete?.jobTitle}" and all associated tasks.
             </AlertDialogDescription>
@@ -610,10 +760,10 @@ const Job = () => {
       </AlertDialog>
 
       {/* Task Details Modal */}
-      <Modal isOpen={showTasksModal} onClose={() => setShowTasksModal(false)} className="w-[95%] sm:max-w-4xl hide-scrollbar">
-        <div className="p-4 sm:p-6 hide-scrollbar">
+      <Modal isOpen={showTasksModal} onClose={() => setShowTasksModal(false)} className="w-[95%] sm:max-w-5xl">
+        <div className="p-4 sm:p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">
+            <h2 className="text-lg sm:text-xl font-semibold text-slate-900">
               {selectedJob?.jobTitle} - Tasks
             </h2>
             <Button variant="ghost" size="icon" onClick={() => setShowTasksModal(false)}>
@@ -621,18 +771,96 @@ const Job = () => {
             </Button>
           </div>
 
+          <section className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Paperclip className="h-4 w-4 text-slate-600" />
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Job Resources</h3>
+            </div>
+            <form className="grid gap-2 md:grid-cols-[1fr_1fr_auto]" onSubmit={handleResourceUpload}>
+              <Input
+                value={resourceLabel}
+                onChange={(event) => setResourceLabel(event.target.value)}
+                placeholder="Label (optional)"
+                className="h-10 border-slate-300 bg-white"
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={(event) => setResourceFile(event.target.files?.[0] || null)}
+                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z,.fig,.sketch,.psd,.ai"
+              />
+              <Button
+                type="submit"
+                disabled={isUploadingResource || !resourceFile}
+                className="h-10 bg-blue-700 px-4 text-white hover:bg-blue-600"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {isUploadingResource ? "Uploading..." : "Upload"}
+              </Button>
+            </form>
+
+            <div className="mt-4 rounded-md border border-slate-200 bg-white">
+              {selectedJobResources.length === 0 ? (
+                <p className="px-4 py-5 text-sm text-slate-500">No resources attached yet.</p>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {selectedJobResources.map((resource) => {
+                    const resourceId = resource.id || resource._id;
+                    return (
+                      <div key={resourceId} className="flex items-start justify-between gap-3 px-4 py-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+                            <FileText className="h-4 w-4 text-slate-500" />
+                            <span className="truncate">{resource.label || resource.fileName}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {resource.fileName} • {formatFileSize(resource.fileSize)}
+                            {resource.uploadedAt ? ` • ${format(new Date(resource.uploadedAt), "MMM dd, yyyy HH:mm")}` : ""}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-slate-300 px-2.5"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              window.open(resource.fileUrl, "_blank", "noopener,noreferrer");
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2.5 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={(event) => handleDeleteResource(resourceId, event)}
+                            disabled={deletingResourceId === resourceId}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+
           {selectedJob?.tasks?.length > 0 ? (
             <div className="space-y-4">
               {selectedJob.tasks.map((task, index) => (
-                <div key={index} className="border rounded-md p-4 bg-white dark:bg-gray-900">
+                <div key={index} className="border border-slate-200 rounded-md p-4 bg-white">
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base">{task.title}</h3>
+                    <h3 className="font-semibold text-slate-900 text-sm sm:text-base">{task.title}</h3>
                     <span
                       className={cn(
                         'px-2 py-1 rounded-full text-xs font-medium',
                         task.isCompleted
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-amber-100 text-amber-700"
                       )}
                     >
                       {task.isCompleted ? "Completed" : "Pending"}
@@ -640,13 +868,13 @@ const Job = () => {
                   </div>
 
                   {task.description && (
-                    <p className="text-gray-600 dark:text-gray-300 mt-2 text-sm">{task.description}</p>
+                    <p className="text-slate-600 mt-2 text-sm">{task.description}</p>
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mt-3">
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Deadline</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                      <p className="text-sm text-slate-500">Deadline</p>
+                      <p className="font-medium text-slate-900 text-sm">
                         {task.deadline
                           ? format(new Date(task.deadline), "MMM dd, yyyy HH:mm")
                           : "No deadline"}
@@ -654,8 +882,8 @@ const Job = () => {
                     </div>
 
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Assigned to</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                      <p className="text-sm text-slate-500">Assigned to</p>
+                      <p className="font-medium text-slate-900 text-sm">
                         {task.resources?.teams?.length > 0 || task.resources?.employees?.length > 0
                           ? `${task.resources.teams.length} teams, ${task.resources.employees.length} employees`
                           : "No assignments"}
@@ -665,10 +893,10 @@ const Job = () => {
 
                   {task.reminder && (
                     <div className="mt-3 flex items-start">
-                      <Bell className="h-4 w-4 text-gray-500 dark:text-gray-400 mt-0.5 mr-2" />
+                      <Bell className="h-4 w-4 text-slate-500 mt-0.5 mr-2" />
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Reminder</p>
-                        <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                        <p className="text-sm text-slate-500">Reminder</p>
+                        <p className="font-medium text-slate-900 text-sm">
                           {formatReminderInfo(task)}
                         </p>
                       </div>
@@ -677,8 +905,8 @@ const Job = () => {
 
                   {(notifications.find((n) => n.data?.taskId === task._id) || messages.find((m) => m.taskId === task._id)) && (
                     <div className="mt-3">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Latest Notification/Message</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                      <p className="text-sm text-slate-500">Latest Notification/Message</p>
+                      <p className="text-sm text-slate-600">
                         {messages.find((m) => m.taskId === task._id)?.message ||
                          notifications.find((n) => n.data?.taskId === task._id)?.message ||
                          "No message"}
@@ -690,7 +918,7 @@ const Job = () => {
                     <Button 
                       size="sm" 
                       variant="outline"
-                      className="flex items-center gap-1 text-blue-600 border-blue-200 hover:bg-blue-50 text-xs sm:text-sm"
+                      className="flex items-center gap-1 text-blue-700 border-blue-200 hover:bg-blue-50 text-xs sm:text-sm"
                       onClick={(e) => handleOpenTaskDetail(selectedJob.id, task._id, e)}
                     >
                       <MessageSquare className="h-4 w-4" />
@@ -701,7 +929,7 @@ const Job = () => {
               ))}
             </div>
           ) : (
-            <p className="text-center text-gray-500 dark:text-gray-400 py-4 text-sm sm:text-base">
+            <p className="text-center text-slate-500 py-4 text-sm sm:text-base">
               No tasks found for this job.
             </p>
           )}

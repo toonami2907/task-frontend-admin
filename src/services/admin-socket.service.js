@@ -213,13 +213,14 @@ export const onAdminNotification = (callback) => {
     callback({
       id: `typing-${data.senderId}`,
       title: "User Typing",
-      message: `${data.senderType} is typing...`,
+      message: `${data.senderName || data.senderType} is typing...`,
       type: "typing",
       data: {
         jobId: data.jobId,
         taskId: data.taskId,
         senderId: data.senderId,
         senderType: data.senderType,
+        senderName: data.senderName,
         isTyping: data.isTyping,
       },
     });
@@ -238,7 +239,7 @@ export const onAdminNotification = (callback) => {
   };
 };
 
-export const fetchAdminNotifications = async (page = 1, limit = 20, unreadOnly = false) => {
+export const fetchAdminNotifications = async (page = 1, limit = 20, unreadOnly = false, companyId = null) => {
   try {
     const token = Cookies.get("admin_access_token");
     if (!token) {
@@ -246,7 +247,7 @@ export const fetchAdminNotifications = async (page = 1, limit = 20, unreadOnly =
     }
 
     const response = await axios.get(`${apiUrl}/api/v1/notifications/`, {
-      params: { page, limit, unreadOnly },
+      params: { page, limit, unreadOnly, ...(companyId ? { companyId } : {}) },
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -267,7 +268,7 @@ export const markNotificationAsRead = async (notificationId) => {
     }
 
     const response = await axios.patch(
-      `${apiUrl}/api/v1/notifications/${notificationId}/read/admin`,
+      `${apiUrl}/api/v1/notifications/${notificationId}/read`,
       {},
       {
         headers: {
@@ -291,7 +292,7 @@ export const markAllNotificationsAsRead = async () => {
     }
 
     const response = await axios.patch(
-      `${apiUrl}/api/v1/notifications/read-all/admin`,
+      `${apiUrl}/api/v1/notifications/read-all`,
       {},
       {
         headers: {
@@ -315,7 +316,7 @@ export const deleteNotification = async (notificationId) => {
     }
 
     const response = await axios.delete(
-      `${apiUrl}/api/v1/notifications/${notificationId}/admin`,
+      `${apiUrl}/api/v1/notifications/${notificationId}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -338,7 +339,7 @@ export const deleteAllReadNotifications = async () => {
     }
 
     const response = await axios.delete(
-      `${apiUrl}/api/v1/notifications/read/admin`,
+      `${apiUrl}/api/v1/notifications/read`,
       {
         headers: {
           Authorization: `Bearer ${token}`,

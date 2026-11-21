@@ -3,19 +3,15 @@ import toast from "react-hot-toast";
 
 class NotificationConsumer {
   constructor() {
-    this.url = `wss://${import.meta.env.VITE_CLOUDAMQP_HOST}/ws`;
-    this.username = import.meta.env.VITE_CLOUDAMQP_USERNAME;
-    this.password = import.meta.env.VITE_CLOUDAMQP_PASSWORD;
     this.client = null;
   }
 
-  connect(userId) {
+  // Broker credentials must never be bundled into the browser. The caller
+  // passes a brokerURL and short-lived login/passcode issued by the backend.
+  connect(userId, { brokerURL, login, passcode }) {
     this.client = new Client({
-      brokerURL: this.url,
-      connectHeaders: {
-        login: this.username,
-        passcode: this.password,
-      },
+      brokerURL,
+      connectHeaders: { login, passcode },
       debug: (msg) => console.log("STOMP Debug:", msg),
       onConnect: () => {
         console.log("✅ Connected to RabbitMQ STOMP");

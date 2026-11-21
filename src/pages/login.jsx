@@ -8,7 +8,7 @@ import { Eye, EyeClosed } from "lucide-react";
 import Cookie from 'js-cookie'
 
 const Login = () => {
-  const [email, setEmail] = useState("ikemm50@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +40,6 @@ const Login = () => {
       });
       
       toast.success("Login successful!");
-      console.log("Login successful:", response.data);
       const {admin, accessToken, refreshToken}  = response.data
       Cookie.set('admin_access_token', accessToken, { expires: 1 });
       Cookie.set('admin_refresh_token', refreshToken, { expires: 7 });
